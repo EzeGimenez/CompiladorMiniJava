@@ -1,5 +1,5 @@
-*
-
+/*
+/*/
+!/src/
 !.gitignore
-!src/*
 !input.java
