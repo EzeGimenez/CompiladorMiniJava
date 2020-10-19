@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 
+import static lexical_analyzer.TokenDescriptor.EOF;
 import static org.junit.Assert.assertEquals;
 
 public class LexicalAnalyzerTest {
@@ -25,7 +26,7 @@ public class LexicalAnalyzerTest {
 
         String line = null;
         IToken currentToken = null;
-        while (currentToken == null || !currentToken.getDescriptor().equals(IToken.END_OF_FILE)) {
+        while (currentToken == null || !currentToken.getDescriptor().equals(EOF)) {
             try {
                 line = bufferTest.readLine();
                 currentToken = lexicalAnalyzer.nextToken();

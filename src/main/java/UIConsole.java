@@ -40,7 +40,7 @@ public class UIConsole implements UI {
     @Override
     public void displaySyntaxError(SyntaxException e) {
         System.out.println();
-        System.out.println("Error sintactico en linea " + e.getLine() + ": se encontró " + e.getFound() + " donde se esperaba " + e.getExpected());
+        System.out.println("Error sintactico en linea " + e.getLine() + ": se encontro " + e.getFound() + " donde se esperaba " + e.getExpected());
 
         System.out.println("Detalle: " + e.getLineString());
         String columnPointer = getColumnPointer(e.getColumn() - e.getFound().length() + 1);

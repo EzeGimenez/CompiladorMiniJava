@@ -2,7 +2,7 @@ import lexical_analyzer.*;
 
 import java.io.FileNotFoundException;
 
-import static lexical_analyzer.TokenDescriptor.END_OF_FILE;
+import static lexical_analyzer.TokenDescriptor.EOF;
 
 
 public class ModuloPrincipalLexical implements ModuloPrincipal {
@@ -25,7 +25,7 @@ public class ModuloPrincipalLexical implements ModuloPrincipal {
         ILexicalAnalyzer ILexicalAnalyzer = new LexicalAnalyzer(fileHandler);
 
         IToken currentToken = null;
-        while (currentToken == null || !currentToken.getDescriptor().equals(END_OF_FILE)) {
+        while (currentToken == null || !currentToken.getDescriptor().equals(EOF)) {
             try {
                 currentToken = ILexicalAnalyzer.nextToken();
                 userUI.displayMessage(currentToken.toString());

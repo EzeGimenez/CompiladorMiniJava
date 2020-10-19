@@ -67,6 +67,6 @@ public enum TokenDescriptor {
     ASSIGN_ADD,
     ASSIGN_SUB,
 
-    END_OF_FILE,
+    EOF,
 
 }

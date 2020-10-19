@@ -14,6 +14,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private final List<Exception> exceptionList;
     private IToken currToken;
 
+    //TODO decir que son los "// nada" -> forma avanzada de pre deteccion con siguientes de...
+
     public SyntaxAnalyzer(FileHandler fileHandler, ILexicalAnalyzer lexicalAnalyzer) {
         this.fileHandler = fileHandler;
         this.lexicalAnalyzer = lexicalAnalyzer;
@@ -43,14 +45,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }
     }
 
-    private void match(TokenDescriptor expectedDescriptor) {
+    private void match(TokenDescriptor expectedDescriptor) throws SyntaxException {
         if (expectedDescriptor != currToken.getDescriptor()) {
-            saveException(buildException(expectedDescriptor.toString()));
+            throw buildException(expectedDescriptor.toString());
+        } else {
+            updateToken();
         }
-        updateToken();
     }
 
-    private void updateTokenUntilAfterSentinel(TokenDescriptor... sentinels) {
+    private void updateTokenUntilSentinel(TokenDescriptor... sentinels) {
         boolean halt = false;
         while (!halt) {
             for (TokenDescriptor d : sentinels) {
@@ -59,7 +62,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
                     break;
                 }
             }
-            if (currToken.getDescriptor() == END_OF_FILE) {
+            if (currToken.getDescriptor() == EOF) {
                 halt = true;
             }
             if (!halt) {
@@ -83,7 +86,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         String out = currToken.getLexeme();
 
         switch (currToken.getDescriptor()) {
-            case END_OF_FILE:
+            case EOF:
                 out = "fin de archivo";
                 break;
         }
@@ -110,18 +113,16 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             updateToken();
             if (equalsAny(CLASS, INTERFACE)) {
                 listaClases();
-                match(END_OF_FILE);
-            } else if (equalsAny(END_OF_FILE)) {
-                match(END_OF_FILE);
+                match(EOF);
             } else {
-                saveException(buildException("clase o EOF"));
+                saveException(buildException("clase, interfaz o fin de archivo"));
             }
         } catch (Exception e) {
             saveException(e);
         }
     }
 
-    private void listaClases() throws LexicalException {
+    private void listaClases() throws LexicalException, SyntaxException {
         try {
             if (equalsAny(CLASS)) {
                 clase();
@@ -132,34 +133,45 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             }
         } catch (Exception e) {
             saveException(e);
-            updateTokenUntilAfterSentinel();
+            updateTokenUntilSentinel();
         }
         listaClasesAux();
     }
 
-    private void listaClasesAux() throws LexicalException {
-        if (equalsAny(CLASS)) {
+    private void listaClasesAux() throws LexicalException, SyntaxException {
+        if (equalsAny(CLASS, INTERFACE)) {
             listaClases();
-        } else if (!equalsAny(END_OF_FILE)) {
-            saveException(buildException("una clase, interfaz o fin de archivo"));
+        } else if (!equalsAny(EOF)) {
+            throw buildException("una clase, interfaz o fin de archivo");
         }
     }
 
     private void clase() throws SyntaxException {
-        match(CLASS);
-        match(ID_CLASS);
-        genericidad();
-        herencia();
-        implementa();
+        try {
+            match(CLASS);
+            match(ID_CLASS);
+            genericidad();
+            herencia();
+            implementa();
+        } catch (SyntaxException e) {
+            saveException(e);
+            updateTokenUntilSentinel(BRACES_OPEN);
+        }
         match(BRACES_OPEN);
         listaMiembros();
         match(BRACES_CLOSE);
     }
 
-    private void interfaz() throws SyntaxException, LexicalException {
-        match(INTERFACE);
-        match(ID_CLASS);
-        herenciaInterfaz();
+    private void interfaz() throws SyntaxException {
+        try {
+            match(INTERFACE);
+            match(ID_CLASS);
+            genericidad();
+            herenciaInterfaz();
+        } catch (SyntaxException e) {
+            saveException(e);
+            updateTokenUntilSentinel(BRACES_OPEN);
+        }
         match(BRACES_OPEN);
         listaMiembrosInterfaz();
         match(BRACES_CLOSE);
@@ -169,9 +181,10 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(LESS_THAN)) {
             match(LESS_THAN);
             match(ID_CLASS);
+            genericidad();
             match(GREATER_THAN);
-        } else if (!equalsAny(EXTENDS, IMPLEMENTS, BRACES_OPEN)) {
-            throw buildException("genericidad, extends, implements o {");
+        } else if (!equalsAny(EXTENDS, IMPLEMENTS, BRACES_OPEN, GREATER_THAN, COMMA, ID_MET_VAR, DOT, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, SEMICOLON, PARENTHESES_OPEN)) {
+            throw buildException("token siguiente a genericidad");
         } // nada
     }
 
@@ -179,6 +192,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(EXTENDS)) {
             match(EXTENDS);
             match(ID_CLASS);
+            genericidad();
         } else if (!equalsAny(IMPLEMENTS, BRACES_OPEN)) {
             throw buildException("extends, implements o {");
         }  // nada
@@ -195,6 +209,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private void listaInterfaces() throws SyntaxException {
         match(ID_CLASS);
+        genericidad();
         listaInterfacesAux();
     }
 
@@ -222,7 +237,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
                 miembro();
             } catch (Exception e) {
                 saveException(e);
-                updateTokenUntilAfterSentinel(SEMICOLON, ID_CLASS, PUBLIC, PROTECTED, PRIVATE, STATIC, DYNAMIC, BRACES_CLOSE);
+                updateTokenUntilSentinel(ID_CLASS, PUBLIC, PROTECTED, PRIVATE, STATIC, DYNAMIC, BRACES_CLOSE);
             }
             listaMiembros();
         } else if (!equalsAny(BRACES_CLOSE)) {
@@ -230,9 +245,14 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }  // nada
     }
 
-    private void listaMiembrosInterfaz() throws SyntaxException, LexicalException {
+    private void listaMiembrosInterfaz() throws SyntaxException {
         if (equalsAny(STATIC, DYNAMIC)) {
-            metodo();
+            try {
+                metodoDeclaracion();
+            } catch (Exception e) {
+                saveException(e);
+                updateTokenUntilSentinel(SEMICOLON, ID_CLASS, PUBLIC, PROTECTED, PRIVATE, STATIC, DYNAMIC, BRACES_CLOSE);
+            }
             listaMiembrosInterfaz();
         } else if (!equalsAny(BRACES_CLOSE)) {
             throw buildException("metodo o }");
@@ -243,7 +263,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(PUBLIC, PROTECTED, PRIVATE, ID_CLASS, PR_STRING, PR_BOOLEAN, PR_CHAR, PR_INT)) {
             attrVisibilidad();
         } else if (equalsAny(STATIC, DYNAMIC)) {
-            metodo();
+            metodoConCuerpo();
         } else {
             throw buildException("metodo, constructor o atributo");
         }
@@ -274,18 +294,20 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private void estaticoOVacio() throws SyntaxException {
         if (equalsAny(STATIC)) {
             match(STATIC);
-        } else if (!equalsAny(ID_CLASS, PR_BOOLEAN, PR_INT, PR_STRING)) {
-            throw buildException("estatico o tipo");
-        }
+        } else if (!equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
+            throw buildException("static o tipo");
+        } // nada
     }
 
     private void auxAttrOCons() throws SyntaxException, LexicalException {
         if (equalsAny(ID_CLASS)) {
             match(ID_CLASS);
+            genericidad();
             constructorOAttr();
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             tipoPrimitivo();
             asignacionAttr();
+            match(SEMICOLON);
         } else {
             throw buildException("tipo");
         }
@@ -315,13 +337,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ASSIGN)) {
             match(ASSIGN);
             expresion();
-            listaAsignacion();
-        } else if (equalsAny(COMMA)) {
-            listaAsignacion();
-            match(SEMICOLON);
-        } else if (!equalsAny(SEMICOLON)) {
-            throw buildException("nombre atributos");
-        } // nada
+        }
+        listaAsignacion();
     }
 
     private void listaAsignacion() throws SyntaxException, LexicalException {
@@ -333,12 +350,21 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } // nada
     }
 
-    private void metodo() throws LexicalException, SyntaxException {
+    private void cabeceraMetodo() throws LexicalException, SyntaxException {
         formaMetodo();
         tipoMetodo();
         match(ID_MET_VAR);
         argsFormales();
+    }
+
+    private void metodoConCuerpo() throws SyntaxException, LexicalException {
+        cabeceraMetodo();
         bloque();
+    }
+
+    private void metodoDeclaracion() throws SyntaxException, LexicalException {
+        cabeceraMetodo();
+        match(SEMICOLON);
     }
 
     private void tipo() throws SyntaxException {
@@ -346,6 +372,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             tipoPrimitivo();
         } else if (equalsAny(ID_CLASS)) {
             match(ID_CLASS);
+            genericidad();
         } else {
             throw buildException("una definicion de tipo");
         }
@@ -395,7 +422,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             listaArgsFormales();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
-            throw buildException(")");
+            throw buildException("argumento o )");
         }  // nada
     }
 
@@ -404,7 +431,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             argFormal();
         } catch (Exception e) {
             saveException(e);
-            updateTokenUntilAfterSentinel(COMMA, PARENTHESES_CLOSE);
+            updateTokenUntilSentinel(COMMA, PARENTHESES_CLOSE);
         }
         listaArgsFormalesAUX();
     }
@@ -423,24 +450,25 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         match(ID_MET_VAR);
     }
 
-    private void bloque() {
+    private void bloque() throws SyntaxException {
         match(BRACES_OPEN);
         try {
             listaSentencias();
         } catch (Exception e) {
             saveException(e);
+            updateTokenUntilSentinel(BRACES_CLOSE);
         }
         match(BRACES_CLOSE);
     }
 
     private void listaSentencias() throws SyntaxException {
-        if (equalsAny(SEMICOLON, IF, WHILE, RETURN, ID_CLASS, BRACES_OPEN, PARENTHESES_OPEN, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING, THIS, NEW, ID_MET_VAR)) {
+        if (equalsAny(SEMICOLON, STATIC, IF, WHILE, RETURN, ID_CLASS, BRACES_OPEN, PARENTHESES_OPEN, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING, THIS, NEW, ID_MET_VAR)) {
 
             try {
                 sentencia();
             } catch (Exception e) {
                 saveException(e);
-                updateTokenUntilAfterSentinel(SEMICOLON, BRACES_CLOSE);
+                updateTokenUntilSentinel(SEMICOLON, BRACES_OPEN, BRACES_CLOSE);
             }
 
             listaSentencias();
@@ -456,12 +484,19 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             acceso();
             sentenciaAUX();
             match(SEMICOLON);
+        } else if (equalsAny(STATIC)) {
+            match(STATIC);
+            match(ID_CLASS);
+            genericidad();
+            preAccesoEstatico();
+            match(SEMICOLON);
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             tipoPrimitivo();
-            listaDecVars();
+            asignacionAttr();
             match(SEMICOLON);
         } else if (equalsAny(ID_CLASS)) {
             match(ID_CLASS);
+            genericidad();
             accesoEstaticoODeclaracion();
             match(SEMICOLON);
         } else if (equalsAny(IF)) {
@@ -484,7 +519,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             expresionOVacio();
             match(SEMICOLON);
         } else {
-            throw buildException("; ( this static new idMetVar idClass boolean char int string if while { return");
+            throw buildException("comienzo de una sentencia");
         }
     }
 
@@ -507,9 +542,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private void accesoEstaticoODeclaracion() throws SyntaxException, LexicalException {
         if (equalsAny(ID_MET_VAR)) {
-            listaDecVars();
+            asignacionAttr();
         } else if (equalsAny(DOT)) {
-            match(DOT);
             preAccesoEstatico();
         } else {
             throw buildException("idMetVar o .");
@@ -531,25 +565,6 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else {
             throw buildException("= += -=");
         }
-    }
-
-    private void listaDecVars() throws LexicalException, SyntaxException {
-        try {
-            match(ID_MET_VAR);
-        } catch (Exception e) {
-            saveException(e);
-            updateTokenUntilAfterSentinel(COMMA, SEMICOLON);
-        }
-        listaDecVarsAUX();
-    }
-
-    private void listaDecVarsAUX() throws LexicalException, SyntaxException {
-        if (equalsAny(COMMA)) {
-            match(COMMA);
-            listaDecVars();
-        } else if (!equalsAny(SEMICOLON)) {
-            throw buildException(", ;");
-        } // nada
     }
 
     private void expresionOVacio() throws LexicalException, SyntaxException {
@@ -604,8 +619,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             op3();
             inEq();
             equalsAux();
-        } else if (!equalsAny(OP_AND, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("&& || ) , ;");
+        } else if (!equalsAny(OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
+            throw buildException("== != && || ) , ;");
         } // nada
     }
 
@@ -639,7 +654,6 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } // nada
     }
 
-
     private void mult() throws SyntaxException, LexicalException {
         expresionUnaria();
         multAux();
@@ -651,15 +665,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             expresionUnaria();
             multAux();
         } else if (!equalsAny(ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("|| ) , ;");
+            throw buildException("multiplicacion, suma, in/ecuacion, operador booleano ) , ;");
         } // nada
     }
 
-    private void op1() {
+    private void op1() throws SyntaxException {
         match(OP_OR);
     }
 
-    private void op2() {
+    private void op2() throws SyntaxException {
         match(OP_AND);
     }
 
@@ -713,10 +727,10 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ADD, SUB, OP_NOT)) {
             operadorUnario();
             operando();
-        } else if (equalsAny(NULL, BOOLEAN, INTEGER, CHARACTER, STRING, PARENTHESES_OPEN, ID_CLASS, THIS, NEW, ID_MET_VAR)) {
+        } else if (equalsAny(NULL, BOOLEAN, INTEGER, CHARACTER, STRING, PARENTHESES_OPEN, ID_CLASS, THIS, NEW, ID_MET_VAR, STATIC)) {
             operando();
         } else {
-            throw buildException("una expresion unaria u operando");
+            throw buildException("una expresion u operando");
         }
     }
 
@@ -735,7 +749,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private void operando() throws LexicalException, SyntaxException {
         if (equalsAny(NULL, BOOLEAN, INTEGER, CHARACTER, STRING)) {
             literal();
-        } else if (equalsAny(PARENTHESES_OPEN, ID_CLASS, THIS, NEW, ID_MET_VAR)) {
+        } else if (equalsAny(STATIC, ID_CLASS, PARENTHESES_OPEN, THIS, NEW, ID_MET_VAR)) {
             accesoOperando();
         } else {
             throw buildException("literal o modo de acceso");
@@ -759,25 +773,25 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     }
 
     private void preAccesoEstatico() throws SyntaxException, LexicalException {
-        accesoEstatico();
+        varOMetodoEncadenado();
         encadenado();
         sentenciaAUX();
-    }
-
-    private void accesoOperando() throws SyntaxException, LexicalException {
-        if (equalsAny(PARENTHESES_OPEN, THIS, NEW, ID_MET_VAR)) {
-            acceso();
-        } else if (equalsAny(ID_CLASS)) {
-            accesoEstatico();
-            encadenado();
-        } else {
-            throw buildException("tipo de acceso");
-        }
     }
 
     private void acceso() throws LexicalException, SyntaxException {
         primario();
         encadenado();
+    }
+
+    private void accesoOperando() throws SyntaxException, LexicalException {
+        if (equalsAny(PARENTHESES_OPEN, THIS, NEW, ID_MET_VAR)) {
+            acceso();
+        } else if (equalsAny(STATIC, ID_CLASS)) {
+            accesoEstatico();
+            encadenado();
+        } else {
+            throw buildException("tipo de acceso");
+        }
     }
 
     private void primario() throws LexicalException, SyntaxException {
@@ -817,17 +831,22 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(PARENTHESES_OPEN)) {
             argsActuales();
         } else if (!equalsAny(SEMICOLON, DOT, EQUALS, NOT_EQUALS, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, ADD, SUB, MULTIPLY, DIVIDE, REMAINDER, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, ASSIGN, ASSIGN_ADD, ASSIGN_SUB)) {
-            throw buildException("acceso var, asignacion u operador");
+            throw buildException("una expresion o )");
         } // nada
     }
 
-    private void accesoEstatico() throws LexicalException, SyntaxException {
-        if (equalsAny(ID_CLASS)) {
+    private void accesoEstatico() throws SyntaxException, LexicalException {
+        if (equalsAny(STATIC)) {
+            match(STATIC);
             match(ID_CLASS);
-            match(DOT);
-            accesoEstaticoMetodoOVar();
+            varOMetodoEncadenado();
+            encadenado();
+        } else if (equalsAny(ID_CLASS)) {
+            match(ID_CLASS);
+            varOMetodoEncadenado();
+            encadenado();
         } else {
-            throw buildException("id de Clase");
+            throw buildException("static o idClase");
         }
     }
 
@@ -835,26 +854,10 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(NEW)) {
             match(NEW);
             match(ID_CLASS);
+            genericidad();
             argsActuales();
         } else {
             throw buildException("new");
-        }
-    }
-
-    private void accesoEstaticoMetodoOVar() throws LexicalException, SyntaxException {
-        if (equalsAny(ID_MET_VAR)) {
-            match(ID_MET_VAR);
-            accesoEstaticoMetodoOVarAux();
-        } else {
-            throw buildException("idMetVar");
-        }
-    }
-
-    private void accesoEstaticoMetodoOVarAux() throws SyntaxException, LexicalException {
-        if (equalsAny(PARENTHESES_OPEN)) {
-            argsActuales();
-        } else if (!equalsAny(ASSIGN, ASSIGN_ADD, ASSIGN_SUB, DOT, MULTIPLY, DIVIDE, REMAINDER, ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("( o operador binario, acceso");
         }
     }
 
@@ -869,7 +872,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             listaExps();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
             throw buildException(")");
-        }// nada
+        } // nada
     }
 
     private void listaExps() throws LexicalException, SyntaxException {
@@ -877,7 +880,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             expresion();
         } catch (Exception e) {
             saveException(e);
-            updateTokenUntilAfterSentinel(COMMA, PARENTHESES_CLOSE);
+            updateTokenUntilSentinel(COMMA, PARENTHESES_CLOSE);
         }
         listaExpsAUX();
     }
@@ -906,7 +909,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(ID_MET_VAR);
         } catch (Exception e) {
             saveException(e);
-            updateTokenUntilAfterSentinel(PARENTHESES_OPEN, SEMICOLON);
+            updateTokenUntilSentinel(PARENTHESES_OPEN, SEMICOLON);
         }
         varOMetodoEncadenadoAUX();
     }
@@ -914,7 +917,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private void varOMetodoEncadenadoAUX() throws LexicalException, SyntaxException {
         if (equalsAny(PARENTHESES_OPEN)) {
             argsActuales();
-        } else if (!equalsAny(MULTIPLY, DIVIDE, REMAINDER, ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
+        } else if (!equalsAny(DOT, MULTIPLY, DIVIDE, REMAINDER, ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildException("metodo encadenado, asignacion u operador");
         } // nada
     }

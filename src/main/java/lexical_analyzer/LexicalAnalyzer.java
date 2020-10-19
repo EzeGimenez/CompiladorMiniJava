@@ -202,7 +202,7 @@ public class LexicalAnalyzer implements ILexicalAnalyzer {
     }
 
     private IToken eEOF() {
-        return buildTokenFor(END_OF_FILE);
+        return buildTokenFor(EOF);
     }
 
     private IToken e1() {
