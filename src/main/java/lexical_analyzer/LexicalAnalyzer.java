@@ -5,9 +5,6 @@ import data_structures.TrieDescriptor;
 
 import static lexical_analyzer.TokenDescriptor.*;
 
-/**
- *
- */
 public class LexicalAnalyzer implements ILexicalAnalyzer {
 
     private final FileHandler fileHandler;
@@ -42,6 +39,7 @@ public class LexicalAnalyzer implements ILexicalAnalyzer {
         trieDescriptor.insert("class", CLASS);
         trieDescriptor.insert("interface", INTERFACE);
         trieDescriptor.insert("extends", EXTENDS);
+        trieDescriptor.insert("implements", IMPLEMENTS);
         trieDescriptor.insert("static", STATIC);
         trieDescriptor.insert("dynamic", DYNAMIC);
         trieDescriptor.insert("public", PUBLIC);
@@ -337,9 +335,10 @@ public class LexicalAnalyzer implements ILexicalAnalyzer {
 
     private IToken e39() throws LexicalException {
         if (currChar == '\n') {
+            int currRow = fileHandler.getRow();
             updateLexeme();
             updateCurrChar();
-            return e40();
+            return e40(currRow);
         }
 
         blockStringFlag = true;
@@ -347,79 +346,78 @@ public class LexicalAnalyzer implements ILexicalAnalyzer {
         return buildTokenFor(STRING);
     }
 
-    private IToken e40() throws LexicalException {
+    private IToken e40(int currRow) throws LexicalException {
         if (currChar == '\n') {
             updateLexeme();
             updateCurrChar();
-            return e41();
+            return e41(currRow);
         } else if (charChecker.isEOF(currChar)) {
-
             throw buildLexicalException("bloque de String sin cerrar");
         } else {
             updateLexeme();
             updateCurrChar();
-            return e40();
+            return e40(currRow);
         }
     }
 
-    private IToken e41() throws LexicalException {
+    private IToken e41(int currRow) throws LexicalException {
         if (currChar == '"') {
             updateLexeme();
             updateCurrChar();
-            return e42();
+            return e42(currRow);
         } else if (charChecker.isEOF(currChar)) {
             throw buildLexicalException("bloque de String sin cerrar");
         } else if (currChar == '\n') {
             updateLexeme();
             updateCurrChar();
-            return e41();
+            return e41(currRow);
         } else {
             updateLexeme();
             updateCurrChar();
-            return e40();
+            return e40(currRow);
         }
     }
 
-    private IToken e42() throws LexicalException {
+    private IToken e42(int currRow) throws LexicalException {
         if (currChar == '"') {
             updateLexeme();
             updateCurrChar();
-            return e43();
+            return e43(currRow);
         } else if (charChecker.isEOF(currChar)) {
             throw buildLexicalException("bloque de String sin cerrar");
         } else if (currChar == '\n') {
             updateLexeme();
             updateCurrChar();
-            return e41();
+            return e41(currRow);
         } else {
             updateLexeme();
             updateCurrChar();
-            return e40();
+            return e40(currRow);
         }
     }
 
-    private IToken e43() throws LexicalException {
+    private IToken e43(int currRow) throws LexicalException {
         if (currChar == '"') {
             updateLexeme();
             updateCurrChar();
-            return e44();
+            return e44(currRow);
         } else if (charChecker.isEOF(currChar)) {
             throw buildLexicalException("bloque de String sin cerrar");
         } else if (currChar == '\n') {
             updateLexeme();
             updateCurrChar();
-            return e41();
+            return e41(currRow);
         } else {
             updateLexeme();
             updateCurrChar();
-            return e40();
+            return e40(currRow);
         }
     }
 
-    private IToken e44() {
+    private IToken e44(int currRow) {
         formatStringLexeme();
         removeStringBlockDelimiters();
-        return buildTokenFor(STRING);
+        return new Token(STRING, lexeme, currRow);
     }
 
     private void removeStringBlockDelimiters() {

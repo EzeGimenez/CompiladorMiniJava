@@ -13,8 +13,7 @@ public class ModuloPrincipalSyntactic implements ModuloPrincipal {
         userUI = new UIConsole();
         try {
             FileHandler fileHandler = new FileHandlerImpl(fileName);
-            ILexicalAnalyzer lexicalAnalyzer = new LexicalAnalyzer(fileHandler);
-            ISyntaxAnalyzer syntaxAnalyzer = new SyntaxAnalyzer(fileHandler, lexicalAnalyzer);
+            ISyntaxAnalyzer syntaxAnalyzer = new SyntaxAnalyzer(fileHandler);
 
             boolean throwedAnException = analyze(syntaxAnalyzer);
             if (!throwedAnException) {

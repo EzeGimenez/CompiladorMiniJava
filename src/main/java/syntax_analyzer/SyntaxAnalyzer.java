@@ -1,8 +1,11 @@
 package syntax_analyzer;
 
 import lexical_analyzer.*;
+import semantic_analyzer.Class;
+import semantic_analyzer.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import static lexical_analyzer.TokenDescriptor.*;
@@ -12,14 +15,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private final ILexicalAnalyzer lexicalAnalyzer;
     private final FileHandler fileHandler;
     private final List<Exception> exceptionList;
+    private final SymbolTable ST;
     private IToken currToken;
 
-    //TODO decir que son los "// nada" -> forma avanzada de pre deteccion con siguientes de...
-
-    public SyntaxAnalyzer(FileHandler fileHandler, ILexicalAnalyzer lexicalAnalyzer) {
+    public SyntaxAnalyzer(FileHandler fileHandler) {
         this.fileHandler = fileHandler;
-        this.lexicalAnalyzer = lexicalAnalyzer;
-        this.exceptionList = new ArrayList<>();
+        lexicalAnalyzer = new LexicalAnalyzer(fileHandler);
+        exceptionList = new ArrayList<>();
+
+        ST = SymbolTable.getInstance();
     }
 
     @Override
@@ -79,7 +83,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
                 expected,
                 message,
                 fileHandler.getRow(),
-                fileHandler.getColumn());
+                getColumn(message));
+    }
+
+    private int getColumn(String message) {
+        switch (currToken.getDescriptor()) {
+            case EOF:
+                return fileHandler.getColumn() + message.length();
+        }
+        return fileHandler.getColumn();
     }
 
     private String getDisplayableMessage() {
@@ -111,12 +123,9 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private void inicial() {
         try {
             updateToken();
-            if (equalsAny(CLASS, INTERFACE)) {
-                listaClases();
-                match(EOF);
-            } else {
-                saveException(buildException("clase, interfaz o fin de archivo"));
-            }
+            listaClases();
+            match(EOF);
+
         } catch (Exception e) {
             saveException(e);
         }
@@ -133,7 +142,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             }
         } catch (Exception e) {
             saveException(e);
-            updateTokenUntilSentinel();
+            updateTokenUntilSentinel(CLASS, INTERFACE, EOF);
         }
         listaClasesAux();
     }
@@ -142,17 +151,28 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(CLASS, INTERFACE)) {
             listaClases();
         } else if (!equalsAny(EOF)) {
-            throw buildException("una clase, interfaz o fin de archivo");
+            saveException(buildException("una clase, interfaz o fin de archivo"));
+            updateTokenUntilSentinel(CLASS, INTERFACE, EOF);
+            listaClases();
         }
     }
 
     private void clase() throws SyntaxException {
         try {
             match(CLASS);
+            String className = currToken.getLexeme();
             match(ID_CLASS);
-            genericidad();
-            herencia();
-            implementa();
+            IClass classEntry = new Class(className);
+            ST.setCurrClass(classEntry);
+            String genericClass = genericidad();
+            IClassReference superClass = herencia();
+            Collection<IClassReference> interfaceList = implementa();
+
+            ST.getCurrClass().setGenericClass(genericClass);
+            ST.getCurrClass().setClassHierarchy(superClass);
+            for (IClassReference i : interfaceList) {
+                ST.getCurrClass().addInterfaceHierarchy(i);
+            }
         } catch (SyntaxException e) {
             saveException(e);
             updateTokenUntilSentinel(BRACES_OPEN);
@@ -160,14 +180,27 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         match(BRACES_OPEN);
         listaMiembros();
         match(BRACES_CLOSE);
+
+        ST.addClass(ST.getCurrClass());
     }
 
     private void interfaz() throws SyntaxException {
         try {
             match(INTERFACE);
+            String interfaceName = currToken.getLexeme();
             match(ID_CLASS);
-            genericidad();
-            herenciaInterfaz();
+
+            IInterface interfaceEntry = new Interface(interfaceName);
+            ST.setCurrInterface(interfaceEntry);
+
+            String genericClass = genericidad();
+            Collection<IClassReference> interfaceList = herenciaInterfaz();
+
+            ST.getCurrInterface().setGenericClass(genericClass);
+            for (IClassReference i : interfaceList) {
+                ST.getCurrInterface().addInheritance(i);
+            }
+
         } catch (SyntaxException e) {
             saveException(e);
             updateTokenUntilSentinel(BRACES_OPEN);
@@ -175,60 +208,79 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         match(BRACES_OPEN);
         listaMiembrosInterfaz();
         match(BRACES_CLOSE);
+
+        ST.addInterface(ST.getCurrInterface());
     }
 
-    private void genericidad() throws SyntaxException {
+    private String genericidad() throws SyntaxException {
+        String outClass = null;
         if (equalsAny(LESS_THAN)) {
             match(LESS_THAN);
+            String className = currToken.getLexeme();
             match(ID_CLASS);
-            genericidad();
             match(GREATER_THAN);
+
+            outClass = className;
         } else if (!equalsAny(EXTENDS, IMPLEMENTS, BRACES_OPEN, GREATER_THAN, COMMA, ID_MET_VAR, DOT, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, SEMICOLON, PARENTHESES_OPEN)) {
             throw buildException("token siguiente a genericidad");
-        } // nada
+        }
+        return outClass;
     }
 
-    private void herencia() throws SyntaxException {
+    private IClassReference herencia() throws SyntaxException {
         if (equalsAny(EXTENDS)) {
             match(EXTENDS);
+            String className = currToken.getLexeme();
             match(ID_CLASS);
-            genericidad();
+            String genericClass = genericidad();
+
+            return new ClassReference(className, genericClass);
         } else if (!equalsAny(IMPLEMENTS, BRACES_OPEN)) {
             throw buildException("extends, implements o {");
-        }  // nada
+        }
+        return new ClassReference("Object", null);
     }
 
-    private void implementa() throws SyntaxException {
+    private Collection<IClassReference> implementa() throws SyntaxException {
+        Collection<IClassReference> inheritanceEntities = new ArrayList<>();
         if (equalsAny(IMPLEMENTS)) {
             match(IMPLEMENTS);
             listaInterfaces();
         } else if (!equalsAny(BRACES_OPEN)) {
             throw buildException("implements o {");
-        } // nada
+        }
+        return inheritanceEntities;
     }
 
-    private void listaInterfaces() throws SyntaxException {
+    private Collection<IClassReference> listaInterfaces() throws SyntaxException {
+        String className = currToken.getLexeme();
         match(ID_CLASS);
-        genericidad();
-        listaInterfacesAux();
+        String genericClass = genericidad();
+
+        IClassReference inheritanceEntity = new ClassReference(className, genericClass);
+        Collection<IClassReference> out = listaInterfacesAux();
+        out.add(inheritanceEntity);
+        return out;
     }
 
-    private void listaInterfacesAux() throws SyntaxException {
+    private Collection<IClassReference> listaInterfacesAux() throws SyntaxException {
         if (equalsAny(COMMA)) {
             match(COMMA);
-            listaInterfaces();
+            return listaInterfaces();
         } else if (!equalsAny(BRACES_OPEN)) {
             throw buildException("coma o {");
-        } // nada
+        }
+        return new ArrayList<>();
     }
 
-    private void herenciaInterfaz() throws SyntaxException {
+    private Collection<IClassReference> herenciaInterfaz() throws SyntaxException {
         if (equalsAny(EXTENDS)) {
             match(EXTENDS);
-            listaInterfaces();
+            return listaInterfaces();
         } else if (!equalsAny(BRACES_OPEN)) {
             throw buildException("extends o {");
-        } // nada
+        }
+        return new ArrayList<>();
     }
 
     private void listaMiembros() throws SyntaxException {
@@ -242,7 +294,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             listaMiembros();
         } else if (!equalsAny(BRACES_CLOSE)) {
             throw buildException("constructor, metodo, atributo o }");
-        }  // nada
+        }
     }
 
     private void listaMiembrosInterfaz() throws SyntaxException {
@@ -256,7 +308,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             listaMiembrosInterfaz();
         } else if (!equalsAny(BRACES_CLOSE)) {
             throw buildException("metodo o }");
-        } // nada
+        }
     }
 
     private void miembro() throws LexicalException, SyntaxException {
@@ -271,114 +323,152 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private void attrVisibilidad() throws SyntaxException, LexicalException {
         if (equalsAny(PUBLIC)) {
+            IVisibility visibility = new Visibility(currToken.getLexeme());
             match(PUBLIC);
-            attr();
+            attr(visibility);
         } else if (equalsAny(PROTECTED)) {
+            IVisibility visibility = new Visibility(currToken.getLexeme());
             match(PROTECTED);
-            attr();
+            attr(visibility);
         } else if (equalsAny(PRIVATE)) {
+            IVisibility visibility = new Visibility(currToken.getLexeme());
             match(PRIVATE);
-            attr();
+            attr(visibility);
         } else if (equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             auxAttrOCons();
         }
     }
 
-    private void attr() throws SyntaxException, LexicalException {
-        estaticoOVacio();
-        tipo();
-        asignacionAttr();
+    private void attr(IVisibility visibility) throws SyntaxException, LexicalException {
+        IAccessMode accessMode = estaticoOVacio();
+        IType type = tipo();
+        asignacionAttr(visibility, accessMode, type);
         match(SEMICOLON);
     }
 
-    private void estaticoOVacio() throws SyntaxException {
+    private IAccessMode estaticoOVacio() throws SyntaxException {
         if (equalsAny(STATIC)) {
+            String accessType = currToken.getLexeme();
             match(STATIC);
+            return new AccessMode(accessType);
         } else if (!equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             throw buildException("static o tipo");
-        } // nada
+        }
+        return null;
     }
 
     private void auxAttrOCons() throws SyntaxException, LexicalException {
         if (equalsAny(ID_CLASS)) {
+            String className = currToken.getLexeme();
             match(ID_CLASS);
-            genericidad();
-            constructorOAttr();
+            String genericClass = genericidad();
+            IClassReference classReference = new ClassReference(className, genericClass);
+            constructorOAttr(classReference);
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
-            tipoPrimitivo();
-            asignacionAttr();
+            IType type = tipoPrimitivo();
+            IVisibility defaultVisibility = new Visibility("public");
+            IAccessMode defaultAccessMode = new AccessMode("static");
+            asignacionAttr(defaultVisibility, defaultAccessMode, type);
             match(SEMICOLON);
         } else {
             throw buildException("tipo");
         }
     }
 
-    private void constructorOAttr() throws SyntaxException, LexicalException {
+    private void constructorOAttr(IClassReference classReference) throws SyntaxException, LexicalException {
         if (equalsAny(PARENTHESES_OPEN)) {
-            constructor();
+            constructor(classReference);
         } else if (equalsAny(ID_MET_VAR)) {
-            asignacionAttr();
+            IType type = new ReferenceType(classReference.getName(), classReference.getGenericClass());
+            IVisibility defaultVisibility = new Visibility("public");
+            IAccessMode defaultAccessMode = new AccessMode("static");
+            asignacionAttr(defaultVisibility, defaultAccessMode, type);
         } else {
             throw buildException("( o id var o metodo");
         }
     }
 
-    private void constructor() throws SyntaxException, LexicalException {
+    private void constructor(IClassReference classReference) throws SyntaxException, LexicalException {
+        IType returnType = new ReferenceType(classReference.getName(), classReference.getGenericClass());
+        IMethod constructor = new Constructor(classReference.getName(), returnType);
+        ST.setCurrMethod(constructor);
         argsFormales();
         bloque();
+        ST.getCurrClass().setConstructor(constructor);
     }
 
-    private void asignacionAttr() throws SyntaxException, LexicalException {
+    private void asignacionAttr(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException {
+        String attributeName = currToken.getLexeme();
+        IVariable attribute = new Variable(visibility, attributeName, type);
         match(ID_MET_VAR);
-        asignacionAttrAux();
+        asignacionAttrAux(visibility, accessMode, attribute);
+
+        ST.getCurrClass().addAttribute(attribute);
     }
 
-    private void asignacionAttrAux() throws SyntaxException, LexicalException {
+    private void asignacionAttrAux(IVisibility visibility, IAccessMode accessMode, IVariable attribute) throws SyntaxException, LexicalException {
         if (equalsAny(ASSIGN)) {
             match(ASSIGN);
             expresion();
+            // TODO, assign a value to the attribue?
         }
-        listaAsignacion();
+        listaAsignacion(visibility, accessMode, attribute.getType());
     }
 
-    private void listaAsignacion() throws SyntaxException, LexicalException {
+    private void listaAsignacion(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException {
         if (equalsAny(COMMA)) {
             match(COMMA);
-            asignacionAttr();
+            asignacionAttr(visibility, accessMode, type);
         } else if (!equalsAny(SEMICOLON)) {
             throw buildException("nombre o asignacion de variables");
-        } // nada
+        }
     }
 
     private void cabeceraMetodo() throws LexicalException, SyntaxException {
-        formaMetodo();
-        tipoMetodo();
+        IAccessMode accessMode = formaMetodo();
+        IType type = tipoMetodo();
+        String methodName = currToken.getLexeme();
         match(ID_MET_VAR);
+        IMethod newMethod = new Method(accessMode, type, methodName);
+        ST.setCurrMethod(newMethod);
+
         argsFormales();
     }
 
     private void metodoConCuerpo() throws SyntaxException, LexicalException {
-        cabeceraMetodo();
+        try {
+            cabeceraMetodo();
+        } catch (SyntaxException e) {
+            saveException(e);
+            updateTokenUntilSentinel(BRACES_OPEN);
+        }
         bloque();
+        //TODO add bloque to curr method
     }
 
     private void metodoDeclaracion() throws SyntaxException, LexicalException {
         cabeceraMetodo();
+        ST.getCurrInterface().addMethod(ST.getCurrMethod());
         match(SEMICOLON);
     }
 
-    private void tipo() throws SyntaxException {
+    private IType tipo() throws SyntaxException {
+        IType outType;
         if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
-            tipoPrimitivo();
+            outType = tipoPrimitivo();
         } else if (equalsAny(ID_CLASS)) {
+            String typeClassName = currToken.getLexeme();
             match(ID_CLASS);
-            genericidad();
+            String genericClass = genericidad();
+            outType = new ReferenceType(genericClass, typeClassName);
         } else {
             throw buildException("una definicion de tipo");
         }
+        return outType;
     }
 
-    private void tipoPrimitivo() throws SyntaxException {
+    private IType tipoPrimitivo() throws SyntaxException {
+        String typeName = currToken.getLexeme();
         if (equalsAny(PR_BOOLEAN)) {
             match(PR_BOOLEAN);
         } else if (equalsAny(PR_CHAR)) {
@@ -390,9 +480,11 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else {
             throw buildException("boolean, char, int o String");
         }
+        return new PrimitiveType(typeName);
     }
 
-    private void formaMetodo() throws SyntaxException {
+    private IAccessMode formaMetodo() throws SyntaxException {
+        String accesModeName = currToken.getLexeme();
         if (equalsAny(STATIC)) {
             match(STATIC);
         } else if (equalsAny(DYNAMIC)) {
@@ -400,16 +492,21 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else {
             throw buildException("static o dynamic");
         }
+        return new AccessMode(accesModeName);
     }
 
-    private void tipoMetodo() throws SyntaxException {
+    private IType tipoMetodo() throws SyntaxException {
+        IType outType;
         if (equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
-            tipo();
+            outType = tipo();
         } else if (equalsAny(VOID)) {
-            match(VOID);
+            String voidType = currToken.getLexeme();
+            match(VOID); // TODO is this ok??
+            outType = new PrimitiveType(voidType);
         } else {
-            throw buildException("idClass boolean char int String");
+            throw buildException("el tipo de retorno");
         }
+        return outType;
     }
 
     private void argsFormales() throws LexicalException, SyntaxException {
@@ -423,7 +520,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             listaArgsFormales();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
             throw buildException("argumento o )");
-        }  // nada
+        }
     }
 
     private void listaArgsFormales() throws LexicalException, SyntaxException {
@@ -442,12 +539,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             listaArgsFormales();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
             throw buildException("otro argumento o )");
-        }  // nada
+        }
     }
 
     private void argFormal() throws SyntaxException {
-        tipo();
+        IType type = tipo();
+        String parameterName = currToken.getLexeme();
         match(ID_MET_VAR);
+        IParameter parameter = new Parameter(parameterName, type);
+        ST.getCurrMethod().addParameter(parameter);
     }
 
     private void bloque() throws SyntaxException {
@@ -474,7 +574,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             listaSentencias();
         } else if (!equalsAny(BRACES_CLOSE)) {
             throw buildException("una sentencia o }");
-        }  // nada
+        }
     }
 
     private void sentencia() throws LexicalException, SyntaxException {
@@ -491,13 +591,16 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             preAccesoEstatico();
             match(SEMICOLON);
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
-            tipoPrimitivo();
-            asignacionAttr();
+            IType type = tipoPrimitivo();
+            IAccessMode defaultAccessMode = new AccessMode("static");
+            asignacionAttr(null, defaultAccessMode, type);
             match(SEMICOLON);
         } else if (equalsAny(ID_CLASS)) {
+            String classTypeName = currToken.getLexeme();
             match(ID_CLASS);
-            genericidad();
-            accesoEstaticoODeclaracion();
+            String genericClass = genericidad();
+            IType classType = new ReferenceType(classTypeName, genericClass);
+            accesoEstaticoODeclaracion(classType);
             match(SEMICOLON);
         } else if (equalsAny(IF)) {
             match(IF);
@@ -528,7 +631,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             asignacion();
         } else if (!equalsAny(SEMICOLON)) {
             throw buildException(";");
-        } // nada
+        }
     }
 
     private void sentenciaAUX1() throws LexicalException, SyntaxException {
@@ -537,12 +640,13 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             sentencia();
         } else if (!equalsAny(SEMICOLON, IF, WHILE, RETURN, BRACES_OPEN, PARENTHESES_OPEN, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING, THIS, NEW, ID_MET_VAR, ELSE, BRACES_CLOSE)) {
             throw buildException("; if while return idclase { ( boolean char int string this static new idmetvar else }");
-        } // nada
+        }
     }
 
-    private void accesoEstaticoODeclaracion() throws SyntaxException, LexicalException {
+    private void accesoEstaticoODeclaracion(IType classType) throws SyntaxException, LexicalException {
         if (equalsAny(ID_MET_VAR)) {
-            asignacionAttr();
+            IAccessMode defaultAccessMode = new AccessMode("static");
+            asignacionAttr(null, defaultAccessMode, classType);
         } else if (equalsAny(DOT)) {
             preAccesoEstatico();
         } else {
@@ -591,7 +695,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             orAux();
         } else if (!equalsAny(PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildException("|| ) , ;");
-        } // nada
+        }
     }
 
     private void and() throws SyntaxException, LexicalException {
@@ -606,7 +710,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             andAux();
         } else if (!equalsAny(OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildException("&& || ) , ;");
-        } // nada
+        }
     }
 
     private void equalsExp() throws SyntaxException, LexicalException {
@@ -621,7 +725,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             equalsAux();
         } else if (!equalsAny(OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildException("== != && || ) , ;");
-        } // nada
+        }
     }
 
     private void inEq() throws SyntaxException, LexicalException {
@@ -636,7 +740,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             inEqAux();
         } else if (!equalsAny(EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildException("operador binario");
-        } // nada
+        }
     }
 
     private void add() throws SyntaxException, LexicalException {
@@ -651,7 +755,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             addAux();
         } else if (!equalsAny(LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildException("|| ) , ;");
-        } // nada
+        }
     }
 
     private void mult() throws SyntaxException, LexicalException {
@@ -666,7 +770,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             multAux();
         } else if (!equalsAny(ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildException("multiplicacion, suma, in/ecuacion, operador booleano ) , ;");
-        } // nada
+        }
     }
 
     private void op1() throws SyntaxException {
@@ -832,7 +936,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             argsActuales();
         } else if (!equalsAny(SEMICOLON, DOT, EQUALS, NOT_EQUALS, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, ADD, SUB, MULTIPLY, DIVIDE, REMAINDER, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, ASSIGN, ASSIGN_ADD, ASSIGN_SUB)) {
             throw buildException("una expresion o )");
-        } // nada
+        }
     }
 
     private void accesoEstatico() throws SyntaxException, LexicalException {
@@ -872,7 +976,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             listaExps();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
             throw buildException(")");
-        } // nada
+        }
     }
 
     private void listaExps() throws LexicalException, SyntaxException {
@@ -891,7 +995,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             listaExps();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
             throw buildException(") u otra expresion");
-        } // nada
+        }
     }
 
     private void encadenado() throws LexicalException, SyntaxException {
@@ -900,7 +1004,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             encadenado();
         } else if (!equalsAny(MULTIPLY, DIVIDE, REMAINDER, ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildException(". asignacion operacion binaria ; ");
-        } // nada
+        }
     }
 
     private void varOMetodoEncadenado() throws LexicalException, SyntaxException {
@@ -919,6 +1023,6 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             argsActuales();
         } else if (!equalsAny(DOT, MULTIPLY, DIVIDE, REMAINDER, ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildException("metodo encadenado, asignacion u operador");
-        } // nada
+        }
     }
 }

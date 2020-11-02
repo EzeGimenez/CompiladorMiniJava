@@ -16,7 +16,6 @@ public enum TokenDescriptor {
     BOOLEAN,
 
     // palabras reservadas
-    //TODO falta agregar true y false
     PR_INT,
     PR_CHAR,
     PR_BOOLEAN,
