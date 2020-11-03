@@ -2,28 +2,33 @@ import lexical_analyzer.FileHandler;
 import lexical_analyzer.FileHandlerImpl;
 import lexical_analyzer.LexicalException;
 import semantic_analyzer.SemanticException;
+import semantic_analyzer.SymbolTable;
 import syntax_analyzer.ISyntaxAnalyzer;
 import syntax_analyzer.SyntaxAnalyzer;
 import syntax_analyzer.SyntaxException;
 
 import java.io.FileNotFoundException;
 
-public class ModuloPrincipalSyntactic implements ModuloPrincipal {
+public class ModuloPrincipalSemantic implements ModuloPrincipal {
 
     private final UI userUI;
 
-    public ModuloPrincipalSyntactic(String fileName) {
+    public ModuloPrincipalSemantic(String fileName) {
         userUI = new UIConsole();
         try {
             FileHandler fileHandler = new FileHandlerImpl(fileName);
             ISyntaxAnalyzer syntaxAnalyzer = new SyntaxAnalyzer(fileHandler);
 
-            boolean throwedAnException = analyze(syntaxAnalyzer);
-            if (!throwedAnException) {
-                System.out.println("[SinErrores]");
+            boolean hasLexicalOrSyntaxErrors = analyze(syntaxAnalyzer);
+            if (!hasLexicalOrSyntaxErrors) {
+                boolean hasSemanticErrors = consolidate();
+                if (!hasSemanticErrors) {
+                    System.out.println("[SinErrores]");
+                }
             }
 
             fileHandler.invalidate();
+            SymbolTable.invalidate();
         } catch (FileNotFoundException e) {
             reportFileNotFound(fileName);
         }
@@ -51,6 +56,23 @@ public class ModuloPrincipalSyntactic implements ModuloPrincipal {
                 e.printStackTrace();
             }
         }
+        return hasExceptions;
+    }
+
+    private boolean consolidate() {
+        boolean hasExceptions = false, halt = false;
+        SymbolTable.getInstance().consolidate();
+
+        while (!halt) {
+            try {
+                SymbolTable.getInstance().validate();
+                halt = true;
+            } catch (SemanticException e) {
+                hasExceptions = true;
+                userUI.displaySemanticError(e);
+            }
+        }
+
         return hasExceptions;
     }
 

@@ -2,14 +2,24 @@ package semantic_analyzer;
 
 import java.util.Map;
 
-public interface IMethod {
-    String getName();
+public abstract class IMethod extends Entity {
 
-    Map<String, IParameter> getParameterMap();
+    public IMethod(String name, String line, int row, int column) {
+        super(name, line, row, column);
+    }
 
-    void addParameter(IParameter parameter);
+    public abstract Map<String, IParameter> getParameterMap();
 
-    IType getReturnType();
+    public abstract void addParameter(IParameter parameter);
 
-    IAccessMode getAccessMode();
+    public abstract IType getReturnType();
+
+    public abstract IAccessMode getAccessMode();
+
+    public abstract boolean containsParameter(String parameterName);
+
+    @Override
+    public void consolidate() throws SemanticException {
+
+    }
 }

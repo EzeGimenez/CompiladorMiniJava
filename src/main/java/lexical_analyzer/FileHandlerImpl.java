@@ -6,9 +6,9 @@ import java.util.List;
 
 public class FileHandlerImpl implements FileHandler {
 
-    private Reader buffer;
+    private final Reader buffer;
 
-    private List<Integer> currentLine;
+    private final List<Integer> currentLine;
     private int line;
     private int column;
 

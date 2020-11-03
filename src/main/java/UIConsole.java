@@ -1,4 +1,5 @@
 import lexical_analyzer.LexicalException;
+import semantic_analyzer.SemanticException;
 import syntax_analyzer.SyntaxException;
 
 public class UIConsole implements UI {
@@ -47,6 +48,19 @@ public class UIConsole implements UI {
 
         System.out.println(columnPointer);
         System.out.println("[Error:" + e.getFound() + "|" + e.getLine() + "]");
+        System.out.println();
+    }
+
+    @Override
+    public void displaySemanticError(SemanticException e) {
+        System.out.println();
+        System.out.println("Error sintactico en linea " + e.getEntity().getRow() + ": " + e.getEntity().getName() + " " + e.getMessage());
+
+        System.out.println("Detalle: " + e.getEntity().getLine());
+        String columnPointer = getColumnPointer(e.getEntity().getColumn());
+
+        System.out.println(columnPointer);
+        System.out.println("[Error:" + e.getEntity().getName() + "|" + e.getEntity().getRow() + "]");
         System.out.println();
     }
 

@@ -2,9 +2,9 @@ package lexical_analyzer;
 
 public class Token implements IToken {
 
-    private TokenDescriptor descriptor;
-    private String lexeme;
-    private int lineNumber;
+    private final TokenDescriptor descriptor;
+    private final String lexeme;
+    private final int lineNumber;
 
     public Token(TokenDescriptor descriptor, String lexeme, int lineNumber) {
         this.descriptor = descriptor;

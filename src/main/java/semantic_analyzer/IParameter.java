@@ -1,7 +1,10 @@
 package semantic_analyzer;
 
-public interface IParameter {
-    String getName();
+public abstract class IParameter extends Entity {
 
-    IType getType();
+    public IParameter(String name, String line, int row, int column) {
+        super(name, line, row, column);
+    }
+
+    abstract IType getType();
 }

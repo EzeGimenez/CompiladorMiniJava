@@ -8,7 +8,7 @@ import lexical_analyzer.TokenDescriptor;
 public class TrieDescriptor implements Trie {
 
     private static final int ALPHABET_SIZE = 26;
-    private TrieNode root;
+    private final TrieNode root;
 
     public TrieDescriptor() {
         root = new TrieNodeDescriptor();

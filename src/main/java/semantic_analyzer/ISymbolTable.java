@@ -16,11 +16,24 @@ public interface ISymbolTable {
     void setCurrInterface(IInterface currInterface);
 
     void addInterface(IInterface iInterface);
+
     void addClass(IClass iclass);
 
     IMethod getCurrMethod();
 
     void setCurrMethod(IMethod currMethod);
 
-    void invalidate();
+    boolean containsInterface(String name);
+
+    boolean containsClass(String name);
+
+    IClass getClass(String name);
+
+    IInterface getInterface(String name);
+
+    void consolidate();
+
+    void saveException(SemanticException e);
+
+    void validate() throws SemanticException;
 }

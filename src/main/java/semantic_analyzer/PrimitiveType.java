@@ -1,15 +1,13 @@
 package semantic_analyzer;
 
-public class PrimitiveType implements IType {
-    private final String name;
+public abstract class PrimitiveType extends IType {
 
-    public PrimitiveType(String name) {
-        this.name = name;
+    public PrimitiveType(String line, int row, int column) {
+        super(null, line, row, column);
     }
 
     @Override
-    public String getName() {
-        return name;
-    }
+    public void consolidate() {
 
+    }
 }

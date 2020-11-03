@@ -3,31 +3,41 @@ package semantic_analyzer;
 import java.util.Collection;
 import java.util.Map;
 
-public interface IClass {
+public abstract class IClass extends Entity {
 
-    String getName();
+    public IClass(String name, String line, int row, int column) {
+        super(name, line, row, column);
+    }
 
-    String getClassHierarchy();
+    public abstract IClassReference getParentClassRef();
 
-    void setClassHierarchy(IClassReference iClass);
+    public abstract void setParentClassRef(IClassReference iClass);
 
-    Collection<String> getInterfaceHierarchyMap();
+    public abstract Collection<IClassReference> getInterfaceHierarchyMap();
 
-    Map<String, IVariable> getAttributeMap();
+    public abstract Map<String, IVariable> getAttributeMap();
 
-    Map<String, IMethod> getMethodMap();
+    public abstract Map<String, IMethod> getMethodMap();
 
-    IMethod getConstructor();
+    public abstract IMethod getConstructor();
 
-    void setConstructor(IMethod constructor);
+    public abstract void setConstructor(IMethod constructor);
 
-    String getGenericClass();
+    public abstract IClassReference getGenericClassRef();
 
-    void setGenericClass(String genericClass);
+    public abstract void setGenericClassRef(IClassReference genericClassRef);
 
-    void addInterfaceHierarchy(IClassReference iInterface);
+    public abstract void addInterfaceInheritance(IClassReference iInterface);
 
-    void addAttribute(IVariable attribute);
+    public abstract void addAttribute(IVariable attribute);
 
-    void addMethod(IMethod method);
+    public abstract void addMethod(IMethod method);
+
+    public abstract boolean containsAttribute(String name);
+
+    public abstract boolean containsMethod(String name);
+
+    public abstract boolean containsInterfaceInheritance(String name);
+
+    protected abstract boolean hasAncestor(String name) throws SemanticException;
 }

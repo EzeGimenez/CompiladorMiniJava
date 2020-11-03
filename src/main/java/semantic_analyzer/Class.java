@@ -5,40 +5,35 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Class implements IClass {
-    private final String name;
-    private final Collection<String> interfaceHierarchyList;
+public class Class extends IClass {
+
+    private final Collection<IClassReference> interfaceInheritanceList;
     private final Map<String, IVariable> attributeMap;
     private final Map<String, IMethod> methodMap;
-    private String classHierarchy;
-    private IConstructor constructor;
-    private String genericClass; // TODO may be interface instead
+    private IClassReference parentClassRef;
+    private IMethod constructor;
+    private IClassReference genericClassRef;
 
-    public Class(String name) {
-        this.name = name;
+    public Class(String name, String line, int row, int column) {
+        super(name, line, row, column);
         attributeMap = new HashMap<>();
         methodMap = new HashMap<>();
-        interfaceHierarchyList = new ArrayList<>();
+        interfaceInheritanceList = new ArrayList<>();
     }
 
     @Override
-    public String getName() {
-        return name;
+    public IClassReference getParentClassRef() {
+        return parentClassRef;
     }
 
     @Override
-    public String getClassHierarchy() {
-        return classHierarchy;
+    public void setParentClassRef(IClassReference iClass) {
+        parentClassRef = iClass;
     }
 
     @Override
-    public void setClassHierarchy(String iClass) {
-        classHierarchy = iClass;
-    }
-
-    @Override
-    public Collection<String> getInterfaceHierarchyMap() {
-        return interfaceHierarchyList;
+    public Collection<IClassReference> getInterfaceHierarchyMap() {
+        return interfaceInheritanceList;
     }
 
     @Override
@@ -62,18 +57,18 @@ public class Class implements IClass {
     }
 
     @Override
-    public String getGenericClass() {
-        return genericClass;
+    public IClassReference getGenericClassRef() {
+        return genericClassRef;
     }
 
     @Override
-    public void setGenericClass(String genericClass) {
-        this.genericClass = genericClass;
+    public void setGenericClassRef(IClassReference genericClassRef) {
+        this.genericClassRef = genericClassRef;
     }
 
     @Override
-    public void addInterfaceHierarchy(String iInterface) {
-        interfaceHierarchyList.add(iInterface);
+    public void addInterfaceInheritance(IClassReference iInterface) {
+        interfaceInheritanceList.add(iInterface);
     }
 
     @Override
@@ -85,4 +80,70 @@ public class Class implements IClass {
     public void addMethod(IMethod method) {
         methodMap.put(method.getName(), method);
     }
+
+    @Override
+    public boolean containsAttribute(String name) {
+        return attributeMap.containsKey(name);
+    }
+
+    @Override
+    public boolean containsMethod(String name) {
+        return methodMap.containsKey(name);
+    }
+
+    @Override
+    public boolean containsInterfaceInheritance(String name) {
+        for (IClassReference c : interfaceInheritanceList) {
+            if (c.getName().equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void consolidate() throws SemanticException {
+        classInheritanceCheck();
+    }
+
+    @Override
+    protected boolean hasAncestor(String name) throws SemanticException {
+        if (getName().equals(name)) {
+            return true;
+        }
+        if (parentClassRef == null) { // TODO design concern regarding to create class Object without any parentClasses
+            return false;
+        }
+
+        IClass parentClass = SymbolTable.getInstance().getClass(parentClassRef.getName());
+        if (parentClass != null) {
+            return parentClass.hasAncestor(name);
+        }
+
+        return false;
+    }
+
+    private void classInheritanceCheck() throws SemanticException {
+        IClass parentClass = SymbolTable.getInstance().getClass(parentClassRef.getName());
+        if (parentClass == null) {
+            throw new SemanticException(genericClassRef, "clase no definida");
+        }
+        if (parentClass.hasAncestor(this.getName())) {
+            throw new SemanticException(this, "La clase sufre de herencia circular");
+        }
+        if (parentClass.getGenericClassRef() != null) {
+            if (genericClassRef.getGenericClass() == null) {
+                throw new SemanticException(genericClassRef, "Falta el tipo generico de clase generica");
+            }
+            if (genericClassRef == null) {
+                throw new SemanticException(this, "La clase hereda de una clase generica sin instanciar o declarar su propio tipo generico");
+            }
+            IClassReference inheritedInterfaceTypeClass = genericClassRef.getGenericClass().getDeepestMismatchClassRef(getGenericClassRef());
+            if (inheritedInterfaceTypeClass != null) {
+                throw new SemanticException(inheritedInterfaceTypeClass, "no definido");
+            }
+        }
+
+    }
+
 }

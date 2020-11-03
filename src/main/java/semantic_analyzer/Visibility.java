@@ -1,15 +1,34 @@
 package semantic_analyzer;
 
-public class Visibility implements IVisibility {
+public class Visibility extends IVisibility {
 
-    private final String visibility;
+    private final String name;
+    private final int row, column;
 
-    public Visibility(String visibility) {
-        this.visibility = visibility;
+    public Visibility(String name, String line, int row, int column) {
+        super(name, line, row, column);
+        this.name = name;
+        this.row = row;
+        this.column = column;
     }
 
     @Override
-    public String getVisibility() {
-        return visibility;
+    public int getRow() {
+        return row;
+    }
+
+    @Override
+    public int getColumn() {
+        return column;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public void consolidate() throws SemanticException {
+
     }
 }

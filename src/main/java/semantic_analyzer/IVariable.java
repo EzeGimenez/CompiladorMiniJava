@@ -1,10 +1,11 @@
 package semantic_analyzer;
 
-public interface IVariable {
+public abstract class IVariable extends Entity {
+    public IVariable(String name, String line, int row, int column) {
+        super(name, line, row, column);
+    }
 
-    String getName();
+    abstract IType getType();
 
-    IType getType();
-
-    IVisibility getVisibility();
+    abstract IVisibility getVisibility();
 }

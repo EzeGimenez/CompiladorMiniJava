@@ -1,21 +1,20 @@
 package semantic_analyzer;
 
-public class ReferenceType implements IType {
+public class ReferenceType extends IType {
 
-    private final String name;
-    private final String genericClass;
+    private final IClassReference genericClass;
 
-    public ReferenceType(String name, String genericClass) {
-        this.name = name;
+    public ReferenceType(String name, IClassReference genericClass, String line, int row, int column) {
+        super(name, line, row, column);
         this.genericClass = genericClass;
     }
 
-    @Override
-    public String getName() {
-        return name;
+    public IClassReference getGenericClass() {
+        return genericClass;
     }
 
-    public String getGenericClass() {
-        return genericClass;
+    @Override
+    public void consolidate() throws SemanticException {
+
     }
 }

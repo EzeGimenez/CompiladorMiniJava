@@ -5,7 +5,7 @@ import lexical_analyzer.TokenDescriptor;
 public class TrieNodeDescriptor implements TrieNode {
 
     private static final int ALPHABET_SIZE = 26;
-    private TrieNode[] children;
+    private final TrieNode[] children;
     private TokenDescriptor descriptor;
 
     public TrieNodeDescriptor() {

@@ -1,14 +1,13 @@
 package semantic_analyzer;
 
-public class AccessMode implements IAccessMode {
-    private final String access;
+public class AccessMode extends IAccessMode {
 
-    public AccessMode(String access) {
-        this.access = access;
+    public AccessMode(String name, String line, int row, int column) {
+        super(name, line, row, column);
     }
 
     @Override
-    public String getAccess() {
-        return access;
+    public void consolidate() throws SemanticException {
+
     }
 }

@@ -4,14 +4,15 @@ import lexical_analyzer.TokenDescriptor;
 
 /**
  * Interfaz de Trie con descriptor para identificar los nodos aceptadores de palabras claves
- *
+ * <p>
  * Cada Nodo posee un arreglo conteniendo en orden alfabético (si es que hay) el nodo hijo en representacion de la letra.
  */
 public interface Trie {
 
     /**
      * Inserta una llave en el arbol Trie y en su nodo final contiene el descritpor
-     *  @param key        la llave a insertar
+     *
+     * @param key        la llave a insertar
      * @param descriptor el descriptor de la palabra clave
      */
     void insert(String key, TokenDescriptor descriptor);

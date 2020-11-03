@@ -51,7 +51,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private void match(TokenDescriptor expectedDescriptor) throws SyntaxException {
         if (expectedDescriptor != currToken.getDescriptor()) {
-            throw buildException(expectedDescriptor.toString());
+            throw buildSyntaxException(expectedDescriptor.toString());
         } else {
             updateToken();
         }
@@ -75,7 +75,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }
     }
 
-    private SyntaxException buildException(String expected) {
+    private SyntaxException buildSyntaxException(String expected) {
         String message = getDisplayableMessage();
 
         return new SyntaxException(
@@ -84,6 +84,10 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
                 message,
                 fileHandler.getRow(),
                 getColumn(message));
+    }
+
+    private SemanticException buildSemanticException(Entity entity, String message) {
+        return new SemanticException(entity, message);
     }
 
     private int getColumn(String message) {
@@ -138,7 +142,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             } else if (equalsAny(INTERFACE)) {
                 interfaz();
             } else {
-                throw buildException("clase o interfaz");
+                throw buildSyntaxException("clase o interfaz");
             }
         } catch (Exception e) {
             saveException(e);
@@ -151,27 +155,32 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(CLASS, INTERFACE)) {
             listaClases();
         } else if (!equalsAny(EOF)) {
-            saveException(buildException("una clase, interfaz o fin de archivo"));
+            saveException(buildSyntaxException("una clase, interfaz o fin de archivo"));
             updateTokenUntilSentinel(CLASS, INTERFACE, EOF);
             listaClases();
         }
     }
 
-    private void clase() throws SyntaxException {
+    private void clase() throws SyntaxException, SemanticException {
         try {
             match(CLASS);
             String className = currToken.getLexeme();
+            IClass classEntry = new Class(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
-            IClass classEntry = new Class(className);
+
             ST.setCurrClass(classEntry);
-            String genericClass = genericidad();
+            IClassReference genericClass = genericidad();
             IClassReference superClass = herencia();
             Collection<IClassReference> interfaceList = implementa();
 
-            ST.getCurrClass().setGenericClass(genericClass);
-            ST.getCurrClass().setClassHierarchy(superClass);
+            ST.getCurrClass().setGenericClassRef(genericClass);
+            ST.getCurrClass().setParentClassRef(superClass);
             for (IClassReference i : interfaceList) {
-                ST.getCurrClass().addInterfaceHierarchy(i);
+                if (!ST.getCurrClass().containsInterfaceInheritance(i.getName())) {
+                    ST.getCurrClass().addInterfaceInheritance(i);
+                } else {
+                    saveException(buildSemanticException(i, "herencia de interfaz duplicada")); //TODO design concern to save & coninue
+                }
             }
         } catch (SyntaxException e) {
             saveException(e);
@@ -181,19 +190,23 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         listaMiembros();
         match(BRACES_CLOSE);
 
-        ST.addClass(ST.getCurrClass());
+        if (!ST.containsClass(ST.getCurrClass().getName())) {
+            ST.addClass(ST.getCurrClass());
+        } else {
+            throw buildSemanticException(ST.getCurrClass(), "nombre de clase duplicado");
+        }
     }
 
-    private void interfaz() throws SyntaxException {
+    private void interfaz() throws SyntaxException, SemanticException {
         try {
             match(INTERFACE);
             String interfaceName = currToken.getLexeme();
+            IInterface interfaceEntry = new Interface(interfaceName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
 
-            IInterface interfaceEntry = new Interface(interfaceName);
             ST.setCurrInterface(interfaceEntry);
 
-            String genericClass = genericidad();
+            IClassReference genericClass = genericidad();
             Collection<IClassReference> interfaceList = herenciaInterfaz();
 
             ST.getCurrInterface().setGenericClass(genericClass);
@@ -209,55 +222,64 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         listaMiembrosInterfaz();
         match(BRACES_CLOSE);
 
-        ST.addInterface(ST.getCurrInterface());
+        if (!ST.containsInterface(ST.getCurrInterface().getName())) {
+            ST.addInterface(ST.getCurrInterface());
+        } else {
+            throw buildSemanticException(ST.getCurrInterface(), "Ya fué declarada una interfaz con el mismo nombre");
+        }
     }
 
-    private String genericidad() throws SyntaxException {
-        String outClass = null;
+    private IClassReference genericidad() throws SyntaxException {
+        IClassReference outClassRef = null;
         if (equalsAny(LESS_THAN)) {
             match(LESS_THAN);
             String className = currToken.getLexeme();
+            outClassRef = new ClassReference(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
+            IClassReference genericClass = genericidad();
             match(GREATER_THAN);
+            outClassRef.setGenericClass(genericClass);
 
-            outClass = className;
         } else if (!equalsAny(EXTENDS, IMPLEMENTS, BRACES_OPEN, GREATER_THAN, COMMA, ID_MET_VAR, DOT, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, SEMICOLON, PARENTHESES_OPEN)) {
-            throw buildException("token siguiente a genericidad");
+            throw buildSyntaxException("token siguiente a genericidad");
         }
-        return outClass;
+        return outClassRef;
     }
 
     private IClassReference herencia() throws SyntaxException {
         if (equalsAny(EXTENDS)) {
             match(EXTENDS);
             String className = currToken.getLexeme();
+            IClassReference classReference = new ClassReference(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
-            String genericClass = genericidad();
+            IClassReference genericClass = genericidad();
+            classReference.setGenericClass(genericClass);
 
-            return new ClassReference(className, genericClass);
+            return classReference;
         } else if (!equalsAny(IMPLEMENTS, BRACES_OPEN)) {
-            throw buildException("extends, implements o {");
+            throw buildSyntaxException("extends, implements o {");
         }
-        return new ClassReference("Object", null);
+        return new ClassReference("Object", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
     }
 
     private Collection<IClassReference> implementa() throws SyntaxException {
         Collection<IClassReference> inheritanceEntities = new ArrayList<>();
         if (equalsAny(IMPLEMENTS)) {
             match(IMPLEMENTS);
-            listaInterfaces();
+            inheritanceEntities = listaInterfaces();
         } else if (!equalsAny(BRACES_OPEN)) {
-            throw buildException("implements o {");
+            throw buildSyntaxException("implements o {");
         }
         return inheritanceEntities;
     }
 
     private Collection<IClassReference> listaInterfaces() throws SyntaxException {
         String className = currToken.getLexeme();
+        IClassReference inheritanceEntity = new ClassReference(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         match(ID_CLASS);
-        String genericClass = genericidad();
+        IClassReference genericClass = genericidad();
+        inheritanceEntity.setGenericClass(genericClass);
 
-        IClassReference inheritanceEntity = new ClassReference(className, genericClass);
         Collection<IClassReference> out = listaInterfacesAux();
         out.add(inheritanceEntity);
         return out;
@@ -268,7 +290,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(COMMA);
             return listaInterfaces();
         } else if (!equalsAny(BRACES_OPEN)) {
-            throw buildException("coma o {");
+            throw buildSyntaxException("coma o {");
         }
         return new ArrayList<>();
     }
@@ -278,7 +300,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(EXTENDS);
             return listaInterfaces();
         } else if (!equalsAny(BRACES_OPEN)) {
-            throw buildException("extends o {");
+            throw buildSyntaxException("extends o {");
         }
         return new ArrayList<>();
     }
@@ -293,7 +315,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             }
             listaMiembros();
         } else if (!equalsAny(BRACES_CLOSE)) {
-            throw buildException("constructor, metodo, atributo o }");
+            throw buildSyntaxException("constructor, metodo, atributo o }");
         }
     }
 
@@ -307,31 +329,31 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             }
             listaMiembrosInterfaz();
         } else if (!equalsAny(BRACES_CLOSE)) {
-            throw buildException("metodo o }");
+            throw buildSyntaxException("metodo o }");
         }
     }
 
-    private void miembro() throws LexicalException, SyntaxException {
+    private void miembro() throws LexicalException, SyntaxException, SemanticException {
         if (equalsAny(PUBLIC, PROTECTED, PRIVATE, ID_CLASS, PR_STRING, PR_BOOLEAN, PR_CHAR, PR_INT)) {
             attrVisibilidad();
         } else if (equalsAny(STATIC, DYNAMIC)) {
             metodoConCuerpo();
         } else {
-            throw buildException("metodo, constructor o atributo");
+            throw buildSyntaxException("metodo, constructor o atributo");
         }
     }
 
-    private void attrVisibilidad() throws SyntaxException, LexicalException {
+    private void attrVisibilidad() throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(PUBLIC)) {
-            IVisibility visibility = new Visibility(currToken.getLexeme());
+            IVisibility visibility = new Visibility(currToken.getLexeme(), fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PUBLIC);
             attr(visibility);
         } else if (equalsAny(PROTECTED)) {
-            IVisibility visibility = new Visibility(currToken.getLexeme());
+            IVisibility visibility = new Visibility(currToken.getLexeme(), fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PROTECTED);
             attr(visibility);
         } else if (equalsAny(PRIVATE)) {
-            IVisibility visibility = new Visibility(currToken.getLexeme());
+            IVisibility visibility = new Visibility(currToken.getLexeme(), fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PRIVATE);
             attr(visibility);
         } else if (equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
@@ -339,7 +361,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }
     }
 
-    private void attr(IVisibility visibility) throws SyntaxException, LexicalException {
+    private void attr(IVisibility visibility) throws SyntaxException, LexicalException, SemanticException {
         IAccessMode accessMode = estaticoOVacio();
         IType type = tipo();
         asignacionAttr(visibility, accessMode, type);
@@ -350,77 +372,89 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(STATIC)) {
             String accessType = currToken.getLexeme();
             match(STATIC);
-            return new AccessMode(accessType);
+            return new AccessMode(accessType, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         } else if (!equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
-            throw buildException("static o tipo");
+            throw buildSyntaxException("static o tipo");
         }
         return null;
     }
 
-    private void auxAttrOCons() throws SyntaxException, LexicalException {
+    private void auxAttrOCons() throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(ID_CLASS)) {
             String className = currToken.getLexeme();
+            IClassReference classReference = new ClassReference(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
-            String genericClass = genericidad();
-            IClassReference classReference = new ClassReference(className, genericClass);
+            IClassReference genericClass = genericidad();
+            classReference.setGenericClass(genericClass);
+
             constructorOAttr(classReference);
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
+            IVisibility defaultVisibility = new Visibility("public", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+
             IType type = tipoPrimitivo();
-            IVisibility defaultVisibility = new Visibility("public");
-            IAccessMode defaultAccessMode = new AccessMode("static");
             asignacionAttr(defaultVisibility, defaultAccessMode, type);
             match(SEMICOLON);
         } else {
-            throw buildException("tipo");
+            throw buildSyntaxException("tipo");
         }
     }
 
-    private void constructorOAttr(IClassReference classReference) throws SyntaxException, LexicalException {
+    private void constructorOAttr(IClassReference classReference) throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(PARENTHESES_OPEN)) {
             constructor(classReference);
         } else if (equalsAny(ID_MET_VAR)) {
-            IType type = new ReferenceType(classReference.getName(), classReference.getGenericClass());
-            IVisibility defaultVisibility = new Visibility("public");
-            IAccessMode defaultAccessMode = new AccessMode("static");
+            IVisibility defaultVisibility = new Visibility("public", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+
+            IType type = new ReferenceType(classReference.getName(), classReference.getGenericClass(), fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+
             asignacionAttr(defaultVisibility, defaultAccessMode, type);
         } else {
-            throw buildException("( o id var o metodo");
+            throw buildSyntaxException("( o id var o metodo");
         }
     }
 
-    private void constructor(IClassReference classReference) throws SyntaxException, LexicalException {
-        IType returnType = new ReferenceType(classReference.getName(), classReference.getGenericClass());
-        IMethod constructor = new Constructor(classReference.getName(), returnType);
+    private void constructor(IClassReference classReference) throws SyntaxException, LexicalException, SemanticException {
+        IType returnType = new ReferenceType(classReference.getName(), classReference.getGenericClass(), fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        IMethod constructor = new Constructor(classReference.getName(), returnType, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         ST.setCurrMethod(constructor);
         argsFormales();
         bloque();
-        ST.getCurrClass().setConstructor(constructor);
+        if (ST.getCurrClass().getConstructor() == null) {
+            ST.getCurrClass().setConstructor(constructor);
+        } else {
+            throw buildSemanticException(ST.getCurrMethod(), "dos constructores en una misma clase");
+        }
     }
 
-    private void asignacionAttr(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException {
+    private void asignacionAttr(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
         String attributeName = currToken.getLexeme();
-        IVariable attribute = new Variable(visibility, attributeName, type);
+        IVariable attribute = new Variable(attributeName, visibility, type, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         match(ID_MET_VAR);
-        asignacionAttrAux(visibility, accessMode, attribute);
+        asignacionAttrAux(visibility, accessMode, type);
 
-        ST.getCurrClass().addAttribute(attribute);
+        if (!ST.getCurrClass().containsAttribute(attributeName)) {
+            ST.getCurrClass().addAttribute(attribute);
+        } else {
+            throw buildSemanticException(attribute, "nombre de atributo duplicado");
+        }
     }
 
-    private void asignacionAttrAux(IVisibility visibility, IAccessMode accessMode, IVariable attribute) throws SyntaxException, LexicalException {
+    private void asignacionAttrAux(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(ASSIGN)) {
             match(ASSIGN);
             expresion();
-            // TODO, assign a value to the attribue?
         }
-        listaAsignacion(visibility, accessMode, attribute.getType());
+        listaAsignacion(visibility, accessMode, type);
     }
 
-    private void listaAsignacion(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException {
+    private void listaAsignacion(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(COMMA)) {
             match(COMMA);
             asignacionAttr(visibility, accessMode, type);
         } else if (!equalsAny(SEMICOLON)) {
-            throw buildException("nombre o asignacion de variables");
+            throw buildSyntaxException("nombre o asignacion de variables");
         }
     }
 
@@ -428,14 +462,14 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         IAccessMode accessMode = formaMetodo();
         IType type = tipoMetodo();
         String methodName = currToken.getLexeme();
+        IMethod newMethod = new Method(accessMode, type, methodName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         match(ID_MET_VAR);
-        IMethod newMethod = new Method(accessMode, type, methodName);
         ST.setCurrMethod(newMethod);
 
         argsFormales();
     }
 
-    private void metodoConCuerpo() throws SyntaxException, LexicalException {
+    private void metodoConCuerpo() throws SyntaxException, LexicalException, SemanticException {
         try {
             cabeceraMetodo();
         } catch (SyntaxException e) {
@@ -443,12 +477,21 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             updateTokenUntilSentinel(BRACES_OPEN);
         }
         bloque();
-        //TODO add bloque to curr method
+        if (!ST.getCurrClass().containsMethod(ST.getCurrMethod().getName())) {
+            ST.getCurrClass().addMethod(ST.getCurrMethod());
+        } else {
+            throw buildSemanticException(ST.getCurrMethod(), "nombre método duplicado");
+        }
     }
 
-    private void metodoDeclaracion() throws SyntaxException, LexicalException {
+    private void metodoDeclaracion() throws SyntaxException, LexicalException, SemanticException {
         cabeceraMetodo();
-        ST.getCurrInterface().addMethod(ST.getCurrMethod());
+        if (!ST.getCurrInterface().containsMethod(ST.getCurrMethod().getName())) {
+            ST.getCurrInterface().addMethod(ST.getCurrMethod());
+        } else {
+            throw buildSemanticException(ST.getCurrMethod(), "nombre método duplicado");
+        }
+
         match(SEMICOLON);
     }
 
@@ -459,40 +502,49 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(ID_CLASS)) {
             String typeClassName = currToken.getLexeme();
             match(ID_CLASS);
-            String genericClass = genericidad();
-            outType = new ReferenceType(genericClass, typeClassName);
+            IClassReference genericClass = genericidad();
+            outType = new ReferenceType(typeClassName, genericClass, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         } else {
-            throw buildException("una definicion de tipo");
+            throw buildSyntaxException("una definicion de tipo");
         }
         return outType;
     }
 
     private IType tipoPrimitivo() throws SyntaxException {
-        String typeName = currToken.getLexeme();
+        PrimitiveType primitiveType;
         if (equalsAny(PR_BOOLEAN)) {
+            primitiveType = new BooleanType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PR_BOOLEAN);
+
         } else if (equalsAny(PR_CHAR)) {
+            primitiveType = new CharType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PR_CHAR);
+
         } else if (equalsAny(PR_INT)) {
+            primitiveType = new IntType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PR_INT);
+
         } else if (equalsAny(PR_STRING)) {
+            primitiveType = new StringType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PR_STRING);
+
         } else {
-            throw buildException("boolean, char, int o String");
+            throw buildSyntaxException("boolean, char, int o String");
         }
-        return new PrimitiveType(typeName);
+        return primitiveType;
     }
 
     private IAccessMode formaMetodo() throws SyntaxException {
         String accesModeName = currToken.getLexeme();
+        IAccessMode accessMode = new AccessMode(accesModeName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         if (equalsAny(STATIC)) {
             match(STATIC);
         } else if (equalsAny(DYNAMIC)) {
             match(DYNAMIC);
         } else {
-            throw buildException("static o dynamic");
+            throw buildSyntaxException("static o dynamic");
         }
-        return new AccessMode(accesModeName);
+        return accessMode;
     }
 
     private IType tipoMetodo() throws SyntaxException {
@@ -500,11 +552,10 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             outType = tipo();
         } else if (equalsAny(VOID)) {
-            String voidType = currToken.getLexeme();
-            match(VOID); // TODO is this ok??
-            outType = new PrimitiveType(voidType);
+            match(VOID);
+            outType = null;
         } else {
-            throw buildException("el tipo de retorno");
+            throw buildSyntaxException("el tipo de retorno");
         }
         return outType;
     }
@@ -519,7 +570,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             listaArgsFormales();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
-            throw buildException("argumento o )");
+            throw buildSyntaxException("argumento o )");
         }
     }
 
@@ -538,16 +589,22 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(COMMA);
             listaArgsFormales();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
-            throw buildException("otro argumento o )");
+            throw buildSyntaxException("otro argumento o )");
         }
     }
 
-    private void argFormal() throws SyntaxException {
+    private void argFormal() throws SyntaxException, SemanticException {
         IType type = tipo();
         String parameterName = currToken.getLexeme();
+        IParameter parameter = new Parameter(parameterName, type, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+
         match(ID_MET_VAR);
-        IParameter parameter = new Parameter(parameterName, type);
-        ST.getCurrMethod().addParameter(parameter);
+
+        if (!ST.getCurrMethod().containsParameter(parameterName)) {
+            ST.getCurrMethod().addParameter(parameter);
+        } else {
+            throw buildSemanticException(parameter, "nombre de parámetro duplicado");
+        }
     }
 
     private void bloque() throws SyntaxException {
@@ -573,11 +630,11 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
             listaSentencias();
         } else if (!equalsAny(BRACES_CLOSE)) {
-            throw buildException("una sentencia o }");
+            throw buildSyntaxException("una sentencia o }");
         }
     }
 
-    private void sentencia() throws LexicalException, SyntaxException {
+    private void sentencia() throws LexicalException, SyntaxException, SemanticException {
         if (equalsAny(SEMICOLON)) {
             match(SEMICOLON);
         } else if (equalsAny(PARENTHESES_OPEN, THIS, NEW, ID_MET_VAR)) {
@@ -591,15 +648,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             preAccesoEstatico();
             match(SEMICOLON);
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
+            IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             IType type = tipoPrimitivo();
-            IAccessMode defaultAccessMode = new AccessMode("static");
             asignacionAttr(null, defaultAccessMode, type);
             match(SEMICOLON);
         } else if (equalsAny(ID_CLASS)) {
             String classTypeName = currToken.getLexeme();
             match(ID_CLASS);
-            String genericClass = genericidad();
-            IType classType = new ReferenceType(classTypeName, genericClass);
+            IClassReference genericClass = genericidad();
+            IType classType = new ReferenceType(classTypeName, genericClass, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             accesoEstaticoODeclaracion(classType);
             match(SEMICOLON);
         } else if (equalsAny(IF)) {
@@ -622,7 +679,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             expresionOVacio();
             match(SEMICOLON);
         } else {
-            throw buildException("comienzo de una sentencia");
+            throw buildSyntaxException("comienzo de una sentencia");
         }
     }
 
@@ -630,27 +687,27 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ASSIGN, ASSIGN_ADD, ASSIGN_SUB)) {
             asignacion();
         } else if (!equalsAny(SEMICOLON)) {
-            throw buildException(";");
+            throw buildSyntaxException(";");
         }
     }
 
-    private void sentenciaAUX1() throws LexicalException, SyntaxException {
+    private void sentenciaAUX1() throws LexicalException, SyntaxException, SemanticException {
         if (equalsAny(ELSE)) {
             match(ELSE);
             sentencia();
         } else if (!equalsAny(SEMICOLON, IF, WHILE, RETURN, BRACES_OPEN, PARENTHESES_OPEN, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING, THIS, NEW, ID_MET_VAR, ELSE, BRACES_CLOSE)) {
-            throw buildException("; if while return idclase { ( boolean char int string this static new idmetvar else }");
+            throw buildSyntaxException("; if while return idclase { ( boolean char int string this static new idmetvar else }");
         }
     }
 
-    private void accesoEstaticoODeclaracion(IType classType) throws SyntaxException, LexicalException {
+    private void accesoEstaticoODeclaracion(IType classType) throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(ID_MET_VAR)) {
-            IAccessMode defaultAccessMode = new AccessMode("static");
+            IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             asignacionAttr(null, defaultAccessMode, classType);
         } else if (equalsAny(DOT)) {
             preAccesoEstatico();
         } else {
-            throw buildException("idMetVar o .");
+            throw buildSyntaxException("idMetVar o .");
         }
     }
 
@@ -667,7 +724,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(ASSIGN_ADD)) {
             match(ASSIGN_ADD);
         } else {
-            throw buildException("= += -=");
+            throw buildSyntaxException("= += -=");
         }
     }
 
@@ -675,7 +732,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ADD, SUB, OP_NOT, NULL, ID_CLASS, BOOLEAN, INTEGER, CHARACTER, STRING, PARENTHESES_OPEN, THIS, NEW, ID_MET_VAR)) {
             expresion();
         } else if (!equalsAny(SEMICOLON)) {
-            throw buildException("valor o ;");
+            throw buildSyntaxException("valor o ;");
         }
     }
 
@@ -694,7 +751,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             and();
             orAux();
         } else if (!equalsAny(PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("|| ) , ;");
+            throw buildSyntaxException("|| ) , ;");
         }
     }
 
@@ -709,7 +766,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             equalsExp();
             andAux();
         } else if (!equalsAny(OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("&& || ) , ;");
+            throw buildSyntaxException("&& || ) , ;");
         }
     }
 
@@ -724,7 +781,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             inEq();
             equalsAux();
         } else if (!equalsAny(OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("== != && || ) , ;");
+            throw buildSyntaxException("== != && || ) , ;");
         }
     }
 
@@ -739,7 +796,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             add();
             inEqAux();
         } else if (!equalsAny(EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("operador binario");
+            throw buildSyntaxException("operador binario");
         }
     }
 
@@ -754,7 +811,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             mult();
             addAux();
         } else if (!equalsAny(LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("|| ) , ;");
+            throw buildSyntaxException("|| ) , ;");
         }
     }
 
@@ -769,7 +826,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             expresionUnaria();
             multAux();
         } else if (!equalsAny(ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("multiplicacion, suma, in/ecuacion, operador booleano ) , ;");
+            throw buildSyntaxException("multiplicacion, suma, in/ecuacion, operador booleano ) , ;");
         }
     }
 
@@ -787,7 +844,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(NOT_EQUALS)) {
             match(NOT_EQUALS);
         } else {
-            throw buildException("== o !=");
+            throw buildSyntaxException("== o !=");
         }
     }
 
@@ -801,7 +858,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(GREATER_EQUALS)) {
             match(GREATER_EQUALS);
         } else {
-            throw buildException("< > <= >=");
+            throw buildSyntaxException("< > <= >=");
         }
     }
 
@@ -811,7 +868,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(SUB)) {
             match(SUB);
         } else {
-            throw buildException("+ o -");
+            throw buildSyntaxException("+ o -");
         }
     }
 
@@ -823,7 +880,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(REMAINDER)) {
             match(REMAINDER);
         } else {
-            throw buildException("*, / o %");
+            throw buildSyntaxException("*, / o %");
         }
     }
 
@@ -834,7 +891,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(NULL, BOOLEAN, INTEGER, CHARACTER, STRING, PARENTHESES_OPEN, ID_CLASS, THIS, NEW, ID_MET_VAR, STATIC)) {
             operando();
         } else {
-            throw buildException("una expresion u operando");
+            throw buildSyntaxException("una expresion u operando");
         }
     }
 
@@ -846,7 +903,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(OP_NOT)) {
             match(OP_NOT);
         } else {
-            throw buildException("+ - !");
+            throw buildSyntaxException("+ - !");
         }
     }
 
@@ -856,7 +913,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(STATIC, ID_CLASS, PARENTHESES_OPEN, THIS, NEW, ID_MET_VAR)) {
             accesoOperando();
         } else {
-            throw buildException("literal o modo de acceso");
+            throw buildSyntaxException("literal o modo de acceso");
         }
     }
 
@@ -872,7 +929,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (equalsAny(STRING)) {
             match(STRING);
         } else {
-            throw buildException("tipo primitivo o null");
+            throw buildSyntaxException("tipo primitivo o null");
         }
     }
 
@@ -894,7 +951,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             accesoEstatico();
             encadenado();
         } else {
-            throw buildException("tipo de acceso");
+            throw buildSyntaxException("tipo de acceso");
         }
     }
 
@@ -910,7 +967,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             expresion();
             match(PARENTHESES_CLOSE);
         } else {
-            throw buildException("acceso primario");
+            throw buildSyntaxException("acceso primario");
         }
     }
 
@@ -918,7 +975,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(THIS)) {
             match(THIS);
         } else {
-            throw buildException("this");
+            throw buildSyntaxException("this");
         }
     }
 
@@ -927,7 +984,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(ID_MET_VAR);
             accesoVarOMetodoAUX();
         } else {
-            throw buildException("id met var");
+            throw buildSyntaxException("id met var");
         }
     }
 
@@ -935,7 +992,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(PARENTHESES_OPEN)) {
             argsActuales();
         } else if (!equalsAny(SEMICOLON, DOT, EQUALS, NOT_EQUALS, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, ADD, SUB, MULTIPLY, DIVIDE, REMAINDER, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, ASSIGN, ASSIGN_ADD, ASSIGN_SUB)) {
-            throw buildException("una expresion o )");
+            throw buildSyntaxException("una expresion o )");
         }
     }
 
@@ -950,7 +1007,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             varOMetodoEncadenado();
             encadenado();
         } else {
-            throw buildException("static o idClase");
+            throw buildSyntaxException("static o idClase");
         }
     }
 
@@ -961,7 +1018,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             genericidad();
             argsActuales();
         } else {
-            throw buildException("new");
+            throw buildSyntaxException("new");
         }
     }
 
@@ -975,7 +1032,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ADD, SUB, OP_NOT, NULL, BOOLEAN, INTEGER, CHARACTER, STRING, PARENTHESES_OPEN, THIS, ID_CLASS, NEW, ID_MET_VAR)) {
             listaExps();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
-            throw buildException(")");
+            throw buildSyntaxException(")");
         }
     }
 
@@ -994,7 +1051,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(COMMA);
             listaExps();
         } else if (!equalsAny(PARENTHESES_CLOSE)) {
-            throw buildException(") u otra expresion");
+            throw buildSyntaxException(") u otra expresion");
         }
     }
 
@@ -1003,7 +1060,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             varOMetodoEncadenado();
             encadenado();
         } else if (!equalsAny(MULTIPLY, DIVIDE, REMAINDER, ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException(". asignacion operacion binaria ; ");
+            throw buildSyntaxException(". asignacion operacion binaria ; ");
         }
     }
 
@@ -1022,7 +1079,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(PARENTHESES_OPEN)) {
             argsActuales();
         } else if (!equalsAny(DOT, MULTIPLY, DIVIDE, REMAINDER, ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
-            throw buildException("metodo encadenado, asignacion u operador");
+            throw buildSyntaxException("metodo encadenado, asignacion u operador");
         }
     }
 }

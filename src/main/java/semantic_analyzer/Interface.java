@@ -5,15 +5,15 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Interface implements IInterface {
+public class Interface extends IInterface {
 
-    private final String name;
     private final Map<String, IMethod> methodMap;
     private final Collection<IClassReference> inheritance;
-    private String genericClass;
 
-    public Interface(String name) {
-        this.name = name;
+    private IClassReference genericClass;
+
+    public Interface(String name, String line, int row, int column) {
+        super(name, line, row, column);
         methodMap = new HashMap<>();
         inheritance = new ArrayList<>();
     }
@@ -29,18 +29,13 @@ public class Interface implements IInterface {
     }
 
     @Override
-    public String getGenericClass() {
+    public IClassReference getGenericClass() {
         return genericClass;
     }
 
     @Override
-    public void setGenericClass(String genericClass) {
+    public void setGenericClass(IClassReference genericClass) {
         this.genericClass = genericClass;
-    }
-
-    @Override
-    public String getName() {
-        return name;
     }
 
     @Override
@@ -51,6 +46,83 @@ public class Interface implements IInterface {
     @Override
     public void addMethod(IMethod method) {
         methodMap.put(method.getName(), method);
+    }
+
+    @Override
+    public boolean containsMethod(String name) {
+        return methodMap.containsKey(name);
+    }
+
+    @Override
+    protected boolean hasAncestor(String name) {
+        if (getName().equals(name)) {
+            return true;
+        }
+        boolean hasAncestor = false;
+        for (IClassReference c : inheritance) {
+            IInterface iInterface = getInterfaceForReference(c);
+            if (iInterface != null && iInterface.hasAncestor(name)) {
+                hasAncestor = iInterface.hasAncestor(name);
+            }
+            if (hasAncestor) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private IInterface getInterfaceForReference(IClassReference c) {
+        return SymbolTable.getInstance().getInterface(c.getName());
+    }
+
+    @Override
+    public void consolidate() throws SemanticException {
+        inheritanceCheck();
+        addInheritedMethods();
+        consolidateMethods();
+    }
+
+    private void inheritanceCheck() throws SemanticException {
+        for (IClassReference interfaceRef : inheritance) {
+            IInterface parentInterface = getInterfaceForReference(interfaceRef);
+            if (parentInterface == null) {
+                throw new SemanticException(interfaceRef, "interfaz no definida");
+            }
+            if (parentInterface.hasAncestor(this.getName())) {
+                throw new SemanticException(this, "La interfaz sufre de herencia circular");
+            }
+            if (parentInterface.getGenericClass() != null) {
+                if (interfaceRef.getGenericClass() == null) {
+                    throw new SemanticException(interfaceRef, "Falta el tipo generico de interfaz generica");
+                }
+                if (getGenericClass() == null) {
+                    throw new SemanticException(this, "La interfaz hereda de una interfaz generica sin instanciar o declarar su propio tipo generico");
+                }
+                IClassReference inheritedInterfaceTypeClass = interfaceRef.getGenericClass().getDeepestMismatchClassRef(getGenericClass());
+                if (inheritedInterfaceTypeClass != null) {
+                    throw new SemanticException(inheritedInterfaceTypeClass, "no definido");
+                }
+            }
+        }
+    }
+
+    private void addInheritedMethods() {
+        for (IClassReference c : inheritance) {
+            IInterface iInterface = getInterfaceForReference(c);
+            if (iInterface != null) {
+                methodMap.putAll(iInterface.getMethodMap());
+            }
+        }
+    }
+
+    private void consolidateMethods() {
+        for (IMethod m : methodMap.values()) {
+            try {
+                m.consolidate();
+            } catch (SemanticException e) {
+                SymbolTable.getInstance().saveException(e);
+            }
+        }
     }
 
 }

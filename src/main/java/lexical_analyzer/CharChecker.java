@@ -7,6 +7,7 @@ public interface CharChecker {
 
     /**
      * Retorna True en caso de c ser una letra del alfabeto en mayúscula
+     *
      * @param c el caracter a verificar
      * @return true en caso que se trate de una letra mayuscula, false en caso contrario
      */
@@ -14,6 +15,7 @@ public interface CharChecker {
 
     /**
      * Retorna True en caso de c ser una letra del alfabeto en minuscula
+     *
      * @param c el caracter a verificar
      * @return true en caso que se trate de una letra minuscula, false en caso contrario
      */
@@ -21,6 +23,7 @@ public interface CharChecker {
 
     /**
      * Verifica si el caracter es EOF
+     *
      * @param c entero representando un caracter
      * @return true si el caracter es EOF, falso en caso contrario
      */
@@ -28,6 +31,7 @@ public interface CharChecker {
 
     /**
      * Verifica si un caracter es una letra o no
+     *
      * @param c el caracter en representacion entera a verificar
      * @return true si se trata de una Letra del abecedario, falso en caso contrario
      */
@@ -35,6 +39,7 @@ public interface CharChecker {
 
     /**
      * Verifica si un caracter es un número o no
+     *
      * @param c el caracter en representacion entera a verificar
      * @return true si se trata de un número, falso en caso contrario
      */
@@ -42,7 +47,7 @@ public interface CharChecker {
 
     /**
      * Verifica si un caracter se trata de un espacio en blanco
-     *
+     * <p>
      * Ejemplos de espacio en blanco son \n, ' ', \t
      *
      * @param c el caracter a verificar

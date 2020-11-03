@@ -1,18 +1,16 @@
 package semantic_analyzer;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class Constructor implements IMethod {
-
-    private final String name;
+public class Constructor extends IMethod {
     private final Map<String, IParameter> parameterMap;
     private final IType returnType;
 
-    public Constructor(String name, IType returnType) {
-        this.name = name;
+    public Constructor(String name, IType returnType, String line, int row, int column) {
+        super(name, line, row, column);
         this.returnType = returnType;
-        parameterMap = new HashMap<>();
+        parameterMap = new LinkedHashMap<>();
     }
 
     @Override
@@ -31,12 +29,12 @@ public class Constructor implements IMethod {
     }
 
     @Override
-    public Map<String, IParameter> getParameterMap() {
-        return parameterMap;
+    public boolean containsParameter(String parameterName) {
+        return parameterMap.containsKey(parameterName);
     }
 
     @Override
-    public String getName() {
-        return name;
+    public Map<String, IParameter> getParameterMap() {
+        return parameterMap;
     }
 }

@@ -1,22 +1,21 @@
 package semantic_analyzer;
 
-public class Parameter implements IParameter {
+public class Parameter extends IParameter {
 
-    private final String name;
     private final IType type;
 
-    public Parameter(String name, IType type) {
-        this.name = name;
+    public Parameter(String name, IType type, String line, int row, int column) {
+        super(name, line, row, column);
         this.type = type;
-    }
-
-    @Override
-    public String getName() {
-        return name;
     }
 
     @Override
     public IType getType() {
         return type;
+    }
+
+    @Override
+    public void consolidate() throws SemanticException {
+
     }
 }

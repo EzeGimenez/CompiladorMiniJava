@@ -3,18 +3,25 @@ package semantic_analyzer;
 import java.util.Collection;
 import java.util.Map;
 
-public interface IInterface {
-    Collection<IClassReference> getInheritance();
+public abstract class IInterface extends Entity {
 
-    void addInheritance(IClassReference iInterface);
+    public IInterface(String name, String line, int row, int column) {
+        super(name, line, row, column);
+    }
 
-    String getGenericClass();
+    public abstract Collection<IClassReference> getInheritance();
 
-    String getName();
+    public abstract void addInheritance(IClassReference iInterface);
 
-    Map<String, IMethod> getMethodMap();
+    public abstract IClassReference getGenericClass();
 
-    void addMethod(IMethod method);
+    public abstract void setGenericClass(IClassReference genericClass);
 
-    void setGenericClass(String genericClass);
+    public abstract Map<String, IMethod> getMethodMap();
+
+    public abstract void addMethod(IMethod method);
+
+    public abstract boolean containsMethod(String name);
+
+    protected abstract boolean hasAncestor(String name);
 }

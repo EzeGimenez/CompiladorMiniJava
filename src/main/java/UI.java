@@ -1,4 +1,5 @@
 import lexical_analyzer.LexicalException;
+import semantic_analyzer.SemanticException;
 import syntax_analyzer.SyntaxException;
 
 /**
@@ -33,4 +34,11 @@ public interface UI {
      * @param exception excepcion conteniendo identificadores del error
      */
     void displaySyntaxError(SyntaxException exception);
+
+    /**
+     * mostrar error semántico
+     *
+     * @param e excepcion capturada por el analizador
+     */
+    void displaySemanticError(SemanticException e);
 }

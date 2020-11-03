@@ -1,20 +1,14 @@
 package semantic_analyzer;
 
-public class Variable implements IVariable {
+public class Variable extends IVariable {
 
-    private final String name;
     private final IType type;
-    private IVisibility visibility;
+    private final IVisibility visibility;
 
-    public Variable(IVisibility visibility, String name, IType type) {
-        this.name = name;
+    public Variable(String name, IVisibility visibility, IType type, String line, int row, int column) {
+        super(name, line, row, column);
         this.type = type;
         this.visibility = visibility;
-    }
-
-    @Override
-    public String getName() {
-        return name;
     }
 
     @Override
@@ -25,5 +19,10 @@ public class Variable implements IVariable {
     @Override
     public IVisibility getVisibility() {
         return visibility;
+    }
+
+    @Override
+    public void consolidate() throws SemanticException {
+
     }
 }
