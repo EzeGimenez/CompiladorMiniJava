@@ -82,6 +82,11 @@ public class Interface extends IInterface {
         consolidateMethods();
     }
 
+    @Override
+    public void compareTo(Object o) throws SemanticException {
+
+    }
+
     private void inheritanceCheck() throws SemanticException {
         for (IClassReference interfaceRef : inheritance) {
             IInterface parentInterface = getInterfaceForReference(interfaceRef);
@@ -106,11 +111,25 @@ public class Interface extends IInterface {
         }
     }
 
-    private void addInheritedMethods() {
+    private void addInheritedMethods() throws SemanticException {
         for (IClassReference c : inheritance) {
             IInterface iInterface = getInterfaceForReference(c);
-            if (iInterface != null) {
-                methodMap.putAll(iInterface.getMethodMap());
+            addMethodsFromInterface(iInterface);
+        }
+    }
+
+    private void addMethodsFromInterface(IInterface iInterface) throws SemanticException {
+        IMethod methodWithSameName;
+        for (IMethod inheritedMethod : iInterface.getMethodMap().values()) {
+            methodWithSameName = methodMap.get(inheritedMethod.getName());
+            if (methodWithSameName != null) {
+                try {
+                    methodWithSameName.compareTo(inheritedMethod);
+                } catch (SemanticException e) {
+                    throw new SemanticException(e.getEntity(), "; se intenta cambiar la signatura a un metodo heredado: " + e.getMessage());
+                }
+            } else {
+                methodMap.put(inheritedMethod.getName(), inheritedMethod);
             }
         }
     }

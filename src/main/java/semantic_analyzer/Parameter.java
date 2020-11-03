@@ -18,4 +18,16 @@ public class Parameter extends IParameter {
     public void consolidate() throws SemanticException {
 
     }
+
+    @Override
+    public void compareTo(Object o) throws SemanticException {
+        if (o == null || getClass() != o.getClass()) throw new SemanticException(this, "diferentes");
+        Parameter parameter = (Parameter) o;
+        try {
+            type.compareTo(parameter.getType());
+        } catch (SemanticException e) {
+            throw new SemanticException(e.getEntity(), "distinto tipo de parametro: se encontro " + type.getName() + " donde se esperaba " + parameter.getType().getName());
+        }
+    }
+
 }

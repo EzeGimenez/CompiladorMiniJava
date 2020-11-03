@@ -57,7 +57,7 @@ public class UIConsole implements UI {
         System.out.println("Error sintactico en linea " + e.getEntity().getRow() + ": " + e.getEntity().getName() + " " + e.getMessage());
 
         System.out.println("Detalle: " + e.getEntity().getLine());
-        String columnPointer = getColumnPointer(e.getEntity().getColumn());
+        String columnPointer = getColumnPointer(e.getEntity().getColumn() - e.getEntity().getName().length() + 1);
 
         System.out.println(columnPointer);
         System.out.println("[Error:" + e.getEntity().getName() + "|" + e.getEntity().getRow() + "]");

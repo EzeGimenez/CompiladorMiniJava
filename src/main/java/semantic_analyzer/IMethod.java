@@ -1,6 +1,6 @@
 package semantic_analyzer;
 
-import java.util.Map;
+import java.util.List;
 
 public abstract class IMethod extends Entity {
 
@@ -8,7 +8,7 @@ public abstract class IMethod extends Entity {
         super(name, line, row, column);
     }
 
-    public abstract Map<String, IParameter> getParameterMap();
+    public abstract List<IParameter> getParameterList();
 
     public abstract void addParameter(IParameter parameter);
 

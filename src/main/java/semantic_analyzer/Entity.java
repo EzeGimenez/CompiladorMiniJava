@@ -31,4 +31,6 @@ public abstract class Entity {
     }
 
     public abstract void consolidate() throws SemanticException;
+
+    public abstract void compareTo(Object o) throws SemanticException;
 }

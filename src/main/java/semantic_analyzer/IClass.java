@@ -11,7 +11,7 @@ public abstract class IClass extends Entity {
 
     public abstract IClassReference getParentClassRef();
 
-    public abstract void setParentClassRef(IClassReference iClass);
+    public abstract void setParentClass(IClassReference iClass);
 
     public abstract Collection<IClassReference> getInterfaceHierarchyMap();
 

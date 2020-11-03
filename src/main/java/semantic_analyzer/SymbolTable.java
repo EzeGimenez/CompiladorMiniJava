@@ -34,7 +34,7 @@ public class SymbolTable implements ISymbolTable {
         instance = null;
     }
 
-    private void createDefaultClasses() { // TODO design concern to create them first
+    private void createDefaultClasses() { // TODO design concern regarding their creation first
         IClass objectClass = new Class("Object", "", 0, 0);
         IClass systemClass = new Class("System", "", 0, 0);
 
@@ -46,8 +46,49 @@ public class SymbolTable implements ISymbolTable {
 
         IMethod readMethod = new Method(staticAccessMode, intType, "read", "", 0, 0);
         IMethod printBMethod = new Method(staticAccessMode, null, "printB", "", 0, 0);
-        IMethod readMethod = new Method(staticAccessMode, null, "read", "", 0, 0);
-        IMethod readMethod = new Method(staticAccessMode, null, "read", "", 0, 0);
+        IMethod printCMethod = new Method(staticAccessMode, null, "printC", "", 0, 0);
+        IMethod printIMethod = new Method(staticAccessMode, null, "printI", "", 0, 0);
+        IMethod printSMethod = new Method(staticAccessMode, null, "printS", "", 0, 0);
+        IMethod printlnMethod = new Method(staticAccessMode, null, "println", "", 0, 0);
+        IMethod printBlnMethod = new Method(staticAccessMode, null, "printBln", "", 0, 0);
+        IMethod printClnMethod = new Method(staticAccessMode, null, "printCln", "", 0, 0);
+        IMethod printIlnMethod = new Method(staticAccessMode, null, "printIln", "", 0, 0);
+        IMethod printSlnMethod = new Method(staticAccessMode, null, "printSln", "", 0, 0);
+
+        IParameter printBParameter = new Parameter("b", booleanType, "", 0, 0);
+        IParameter printCParameter = new Parameter("c", charType, "", 0, 0);
+        IParameter printIParameter = new Parameter("i", intType, "", 0, 0);
+        IParameter printSParameter = new Parameter("s", stringType, "", 0, 0);
+        IParameter printBlnParameter = new Parameter("b", booleanType, "", 0, 0);
+        IParameter printClnParameter = new Parameter("c", charType, "", 0, 0);
+        IParameter printIlnParameter = new Parameter("i", intType, "", 0, 0);
+        IParameter printSlnParameter = new Parameter("s", stringType, "", 0, 0);
+
+        printBMethod.addParameter(printBParameter);
+        printCMethod.addParameter(printCParameter);
+        printIMethod.addParameter(printIParameter);
+        printSMethod.addParameter(printSParameter);
+        printBlnMethod.addParameter(printBlnParameter);
+        printClnMethod.addParameter(printClnParameter);
+        printIlnMethod.addParameter(printIlnParameter);
+        printSlnMethod.addParameter(printSlnParameter);
+
+        systemClass.addMethod(readMethod);
+        systemClass.addMethod(printBMethod);
+        systemClass.addMethod(printCMethod);
+        systemClass.addMethod(printIMethod);
+        systemClass.addMethod(printSMethod);
+        systemClass.addMethod(printlnMethod);
+        systemClass.addMethod(printBlnMethod);
+        systemClass.addMethod(printClnMethod);
+        systemClass.addMethod(printIlnMethod);
+        systemClass.addMethod(printSlnMethod);
+
+        IClassReference objectClassReference = new ClassReference(objectClass.getName(), "", 0, 0);
+        systemClass.setParentClass(objectClassReference);
+
+        addClass(objectClass);
+        addClass(systemClass);
     }
 
     @Override

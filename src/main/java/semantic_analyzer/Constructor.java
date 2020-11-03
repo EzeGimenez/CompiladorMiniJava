@@ -1,21 +1,22 @@
 package semantic_analyzer;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 public class Constructor extends IMethod {
-    private final Map<String, IParameter> parameterMap;
+    private final List<IParameter> parameterList;
     private final IType returnType;
 
     public Constructor(String name, IType returnType, String line, int row, int column) {
         super(name, line, row, column);
         this.returnType = returnType;
-        parameterMap = new LinkedHashMap<>();
+        parameterList = new ArrayList<>();
     }
 
     @Override
     public void addParameter(IParameter parameter) {
-        parameterMap.put(parameter.getName(), parameter);
+        parameterList.add(parameter);
     }
 
     @Override
@@ -30,11 +31,19 @@ public class Constructor extends IMethod {
 
     @Override
     public boolean containsParameter(String parameterName) {
-        return parameterMap.containsKey(parameterName);
+        for (IParameter p : parameterList) {
+            if (Objects.equals(p.getName(), parameterName)) return true;
+        }
+        return false;
     }
 
     @Override
-    public Map<String, IParameter> getParameterMap() {
-        return parameterMap;
+    public List<IParameter> getParameterList() {
+        return parameterList;
+    }
+
+    @Override
+    public void compareTo(Object o) throws SemanticException {
+
     }
 }

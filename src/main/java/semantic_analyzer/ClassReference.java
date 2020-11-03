@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import java.util.Objects;
+
 public class ClassReference extends IClassReference {
     private IClassReference genericClass;
 
@@ -32,4 +34,19 @@ public class ClassReference extends IClassReference {
     public void consolidate() throws SemanticException {
 
     }
+
+    @Override
+    public void compareTo(Object o) throws SemanticException {
+        if (o == null || getClass() != o.getClass()) {
+            throw new SemanticException(this, "Referencia a clases no iguales");
+        }
+        ClassReference classRef = (ClassReference) o;
+        if (!Objects.equals(this.getName(), classRef.getName())) {
+            throw new SemanticException(this, "nombre diferente");
+        }
+        if (genericClass != null) {
+            genericClass.compareTo(classRef.genericClass);
+        }
+    }
+
 }

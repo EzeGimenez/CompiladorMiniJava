@@ -27,7 +27,7 @@ public class Class extends IClass {
     }
 
     @Override
-    public void setParentClassRef(IClassReference iClass) {
+    public void setParentClass(IClassReference iClass) {
         parentClassRef = iClass;
     }
 
@@ -104,6 +104,35 @@ public class Class extends IClass {
     @Override
     public void consolidate() throws SemanticException {
         classInheritanceCheck();
+        addInheritedMethods();
+    }
+
+    private void addInheritedMethods() throws SemanticException {
+        if (parentClassRef != null) {
+            IClass iClass = SymbolTable.getInstance().getClass(parentClassRef.getName());
+            addMethodsFromClass(iClass);
+        }
+    }
+
+    private void addMethodsFromClass(IClass iClass) throws SemanticException {
+        IMethod methodWithSameName;
+        for (IMethod inheritedMethod : iClass.getMethodMap().values()) {
+            methodWithSameName = methodMap.get(inheritedMethod.getName());
+            if (methodWithSameName != null) {
+                try {
+                    methodWithSameName.compareTo(inheritedMethod);
+                } catch (SemanticException e) {
+                    throw new SemanticException(e.getEntity(), "; se intenta cambiar la signatura un metodo heredado: " + e.getMessage());
+                }
+            } else {
+                methodMap.put(inheritedMethod.getName(), inheritedMethod);
+            }
+        }
+    }
+
+    @Override
+    public void compareTo(Object o) throws SemanticException {
+
     }
 
     @Override
@@ -124,26 +153,27 @@ public class Class extends IClass {
     }
 
     private void classInheritanceCheck() throws SemanticException {
-        IClass parentClass = SymbolTable.getInstance().getClass(parentClassRef.getName());
-        if (parentClass == null) {
-            throw new SemanticException(genericClassRef, "clase no definida");
-        }
-        if (parentClass.hasAncestor(this.getName())) {
-            throw new SemanticException(this, "La clase sufre de herencia circular");
-        }
-        if (parentClass.getGenericClassRef() != null) {
-            if (genericClassRef.getGenericClass() == null) {
-                throw new SemanticException(genericClassRef, "Falta el tipo generico de clase generica");
+        if (parentClassRef != null) { // TODO design concern regarding to create class Object without any parentClasses
+            IClass parentClass = SymbolTable.getInstance().getClass(parentClassRef.getName());
+            if (parentClass == null) {
+                throw new SemanticException(genericClassRef, "clase no definida");
             }
-            if (genericClassRef == null) {
-                throw new SemanticException(this, "La clase hereda de una clase generica sin instanciar o declarar su propio tipo generico");
+            if (parentClass.hasAncestor(this.getName())) {
+                throw new SemanticException(this, "La clase sufre de herencia circular");
             }
-            IClassReference inheritedInterfaceTypeClass = genericClassRef.getGenericClass().getDeepestMismatchClassRef(getGenericClassRef());
-            if (inheritedInterfaceTypeClass != null) {
-                throw new SemanticException(inheritedInterfaceTypeClass, "no definido");
+            if (parentClass.getGenericClassRef() != null) {
+                if (genericClassRef.getGenericClass() == null) {
+                    throw new SemanticException(genericClassRef, "Falta el tipo generico de clase generica");
+                }
+                if (genericClassRef == null) {
+                    throw new SemanticException(this, "La clase hereda de una clase generica sin instanciar o declarar su propio tipo generico");
+                }
+                IClassReference inheritedInterfaceTypeClass = genericClassRef.getGenericClass().getDeepestMismatchClassRef(getGenericClassRef());
+                if (inheritedInterfaceTypeClass != null) {
+                    throw new SemanticException(inheritedInterfaceTypeClass, "no definido");
+                }
             }
         }
-
     }
 
 }
