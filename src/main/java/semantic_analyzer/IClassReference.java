@@ -11,14 +11,5 @@ public abstract class IClassReference extends Entity {
 
     public abstract void setGenericClass(IClassReference genericClass);
 
-    /**
-     * TODO design concern
-     * Retorna la IClassReference si no coincide con la clase genericClass
-     * (la IClassReference mas profunda si hay clases anidadas)
-     * null si se encuentra
-     *
-     * @param genericClass IClassReference conteniendo la clase buscada
-     * @return la IClassReference mas profunda si no se encuentra genericClass, null si se encuentra genericClass
-     */
-    public abstract IClassReference getDeepestMismatchClassRef(IClassReference genericClass);
+    public abstract void validate(IClassReference genericClass) throws SemanticException;
 }

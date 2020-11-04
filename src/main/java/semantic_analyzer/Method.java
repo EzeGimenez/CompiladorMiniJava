@@ -10,6 +10,10 @@ public class Method extends IMethod {
     private final IType returnType;
     private final IAccessMode accessMode;
 
+    public Method(IAccessMode accessMode, IType returnType, String name) {
+        this(accessMode, returnType, name, "", 0, 0);
+    }
+
     public Method(IAccessMode accessMode, IType returnType, String name, String line, int row, int column) {
         super(name, line, row, column);
         this.accessMode = accessMode;
@@ -44,11 +48,6 @@ public class Method extends IMethod {
             if (Objects.equals(p.getName(), parameterName)) return true;
         }
         return false;
-    }
-
-    @Override
-    public void consolidate() throws SemanticException {
-
     }
 
     @Override

@@ -4,13 +4,12 @@ import java.util.Objects;
 
 public class AccessMode extends IAccessMode {
 
-    public AccessMode(String name, String line, int row, int column) {
-        super(name, line, row, column);
+    public AccessMode(String name) {
+        this(name, "", 0, 0);
     }
 
-    @Override
-    public void consolidate() throws SemanticException {
-
+    public AccessMode(String name, String line, int row, int column) {
+        super(name, line, row, column);
     }
 
     @Override

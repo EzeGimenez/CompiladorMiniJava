@@ -34,35 +34,47 @@ public class SymbolTable implements ISymbolTable {
         instance = null;
     }
 
+    public static boolean isPrimitive(IType type) {
+        String strType = type.getName();
+        switch (strType) {
+            case "boolean":
+            case "String":
+            case "char":
+            case "int":
+                return true;
+        }
+        return false;
+    }
+
     private void createDefaultClasses() { // TODO design concern regarding their creation first
-        IClass objectClass = new Class("Object", "", 0, 0);
-        IClass systemClass = new Class("System", "", 0, 0);
+        IClass objectClass = new Class("Object");
+        IClass systemClass = new Class("System");
 
-        IAccessMode staticAccessMode = new AccessMode("static", "", 0, 0);
-        IType intType = new IntType("", 0, 0);
-        IType booleanType = new BooleanType("", 0, 0);
-        IType charType = new CharType("", 0, 0);
-        IType stringType = new StringType("", 0, 0);
+        IAccessMode staticAccessMode = new AccessMode("static");
+        IType intType = new IntType();
+        IType booleanType = new BooleanType();
+        IType charType = new CharType();
+        IType stringType = new StringType();
 
-        IMethod readMethod = new Method(staticAccessMode, intType, "read", "", 0, 0);
-        IMethod printBMethod = new Method(staticAccessMode, null, "printB", "", 0, 0);
-        IMethod printCMethod = new Method(staticAccessMode, null, "printC", "", 0, 0);
-        IMethod printIMethod = new Method(staticAccessMode, null, "printI", "", 0, 0);
-        IMethod printSMethod = new Method(staticAccessMode, null, "printS", "", 0, 0);
-        IMethod printlnMethod = new Method(staticAccessMode, null, "println", "", 0, 0);
-        IMethod printBlnMethod = new Method(staticAccessMode, null, "printBln", "", 0, 0);
-        IMethod printClnMethod = new Method(staticAccessMode, null, "printCln", "", 0, 0);
-        IMethod printIlnMethod = new Method(staticAccessMode, null, "printIln", "", 0, 0);
-        IMethod printSlnMethod = new Method(staticAccessMode, null, "printSln", "", 0, 0);
+        IMethod readMethod = new Method(staticAccessMode, intType, "read");
+        IMethod printBMethod = new Method(staticAccessMode, null, "printB");
+        IMethod printCMethod = new Method(staticAccessMode, null, "printC");
+        IMethod printIMethod = new Method(staticAccessMode, null, "printI");
+        IMethod printSMethod = new Method(staticAccessMode, null, "printS");
+        IMethod printlnMethod = new Method(staticAccessMode, null, "println");
+        IMethod printBlnMethod = new Method(staticAccessMode, null, "printBln");
+        IMethod printClnMethod = new Method(staticAccessMode, null, "printCln");
+        IMethod printIlnMethod = new Method(staticAccessMode, null, "printIln");
+        IMethod printSlnMethod = new Method(staticAccessMode, null, "printSln");
 
-        IParameter printBParameter = new Parameter("b", booleanType, "", 0, 0);
-        IParameter printCParameter = new Parameter("c", charType, "", 0, 0);
-        IParameter printIParameter = new Parameter("i", intType, "", 0, 0);
-        IParameter printSParameter = new Parameter("s", stringType, "", 0, 0);
-        IParameter printBlnParameter = new Parameter("b", booleanType, "", 0, 0);
-        IParameter printClnParameter = new Parameter("c", charType, "", 0, 0);
-        IParameter printIlnParameter = new Parameter("i", intType, "", 0, 0);
-        IParameter printSlnParameter = new Parameter("s", stringType, "", 0, 0);
+        IParameter printBParameter = new Parameter("b", booleanType);
+        IParameter printCParameter = new Parameter("c", charType);
+        IParameter printIParameter = new Parameter("i", intType);
+        IParameter printSParameter = new Parameter("s", stringType);
+        IParameter printBlnParameter = new Parameter("b", booleanType);
+        IParameter printClnParameter = new Parameter("c", charType);
+        IParameter printIlnParameter = new Parameter("i", intType);
+        IParameter printSlnParameter = new Parameter("s", stringType);
 
         printBMethod.addParameter(printBParameter);
         printCMethod.addParameter(printCParameter);
@@ -84,7 +96,7 @@ public class SymbolTable implements ISymbolTable {
         systemClass.addMethod(printIlnMethod);
         systemClass.addMethod(printSlnMethod);
 
-        IClassReference objectClassReference = new ClassReference(objectClass.getName(), "", 0, 0);
+        IClassReference objectClassReference = new ClassReference(objectClass.getName());
         systemClass.setParentClass(objectClassReference);
 
         addClass(objectClass);

@@ -7,6 +7,12 @@ public abstract class Entity {
     private final String name;
     private final String line;
 
+    public Entity(String name) {
+        this.name = name;
+        row = column = 0;
+        line = "";
+    }
+
     public Entity(String name, String line, int row, int column) {
         this.row = row;
         this.column = column;
@@ -29,8 +35,6 @@ public abstract class Entity {
     public String getLine() {
         return line;
     }
-
-    public abstract void consolidate() throws SemanticException;
 
     public abstract void compareTo(Object o) throws SemanticException;
 }

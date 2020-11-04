@@ -10,12 +10,20 @@ public class Interface extends IInterface {
     private final Map<String, IMethod> methodMap;
     private final Collection<IClassReference> inheritance;
 
-    private IClassReference genericClass;
+    private IClassReference genericType;
+    private boolean didConsolidate;
 
     public Interface(String name, String line, int row, int column) {
         super(name, line, row, column);
         methodMap = new HashMap<>();
         inheritance = new ArrayList<>();
+        didConsolidate = false;
+    }
+
+
+    @Override
+    public void compareTo(Object o) throws SemanticException {
+
     }
 
     @Override
@@ -29,13 +37,13 @@ public class Interface extends IInterface {
     }
 
     @Override
-    public IClassReference getGenericClass() {
-        return genericClass;
+    public IClassReference getGenericType() {
+        return genericType;
     }
 
     @Override
-    public void setGenericClass(IClassReference genericClass) {
-        this.genericClass = genericClass;
+    public void setGenericType(IClassReference genericType) {
+        this.genericType = genericType;
     }
 
     @Override
@@ -71,45 +79,56 @@ public class Interface extends IInterface {
         return false;
     }
 
-    private IInterface getInterfaceForReference(IClassReference c) {
-        return SymbolTable.getInstance().getInterface(c.getName());
-    }
-
     @Override
     public void consolidate() throws SemanticException {
-        inheritanceCheck();
-        addInheritedMethods();
-        consolidateMethods();
+        if (!didConsolidate) {
+            didConsolidate = true;
+            validateInheritance();
+            consolidateAncestors();
+            addInheritedMethods();
+            validateMethods();
+        }
     }
 
-    @Override
-    public void compareTo(Object o) throws SemanticException {
-
+    private void consolidateAncestors() throws SemanticException {
+        for (IClassReference c : inheritance) {
+            IInterface iInterface = getInterfaceForReference(c);
+            iInterface.consolidate();
+        }
     }
 
-    private void inheritanceCheck() throws SemanticException {
+    private void validateInheritance() throws SemanticException {
         for (IClassReference interfaceRef : inheritance) {
             IInterface parentInterface = getInterfaceForReference(interfaceRef);
             if (parentInterface == null) {
+                if (getClassForReference(interfaceRef) != null) {
+                    throw new SemanticException(interfaceRef, "Se intenta extender desde una interfaz la clase " + interfaceRef.getName());
+                }
                 throw new SemanticException(interfaceRef, "interfaz no definida");
             }
             if (parentInterface.hasAncestor(this.getName())) {
                 throw new SemanticException(this, "La interfaz sufre de herencia circular");
             }
-            if (parentInterface.getGenericClass() != null) {
+            if (parentInterface.getGenericType() != null) {
                 if (interfaceRef.getGenericClass() == null) {
                     throw new SemanticException(interfaceRef, "Falta el tipo generico de interfaz generica");
                 }
-                if (getGenericClass() == null) {
+                if (getGenericType() == null) {
                     throw new SemanticException(this, "La interfaz hereda de una interfaz generica sin instanciar o declarar su propio tipo generico");
                 }
-                IClassReference inheritedInterfaceTypeClass = interfaceRef.getGenericClass().getDeepestMismatchClassRef(getGenericClass());
-                if (inheritedInterfaceTypeClass != null) {
-                    throw new SemanticException(inheritedInterfaceTypeClass, "no definido");
-                }
+                interfaceRef.getGenericClass().validate(getGenericType());
             }
         }
     }
+
+    private IInterface getInterfaceForReference(IClassReference c) {
+        return SymbolTable.getInstance().getInterface(c.getName());
+    }
+
+    private IClass getClassForReference(IClassReference c) {
+        return SymbolTable.getInstance().getClass(c.getName());
+    }
+
 
     private void addInheritedMethods() throws SemanticException {
         for (IClassReference c : inheritance) {
@@ -126,7 +145,7 @@ public class Interface extends IInterface {
                 try {
                     methodWithSameName.compareTo(inheritedMethod);
                 } catch (SemanticException e) {
-                    throw new SemanticException(e.getEntity(), "; se intenta cambiar la signatura a un metodo heredado: " + e.getMessage());
+                    throw new SemanticException(e.getEntity(), "se intenta cambiar la signatura a un metodo heredado: " + e.getMessage());
                 }
             } else {
                 methodMap.put(inheritedMethod.getName(), inheritedMethod);
@@ -134,10 +153,10 @@ public class Interface extends IInterface {
         }
     }
 
-    private void consolidateMethods() {
+    private void validateMethods() {
         for (IMethod m : methodMap.values()) {
             try {
-                m.consolidate();
+                m.validate(genericType);
             } catch (SemanticException e) {
                 SymbolTable.getInstance().saveException(e);
             }

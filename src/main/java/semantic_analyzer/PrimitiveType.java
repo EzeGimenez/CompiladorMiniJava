@@ -4,12 +4,16 @@ import java.util.Objects;
 
 public abstract class PrimitiveType extends IType {
 
-    public PrimitiveType(String line, int row, int column) {
-        super(null, line, row, column);
+    public PrimitiveType(String name) {
+        super(name, "", 0, 0);
+    }
+
+    public PrimitiveType(String name, String line, int row, int column) {
+        super(name, line, row, column);
     }
 
     @Override
-    public void consolidate() {
+    public void validate(IClassReference genericType) {
 
     }
 

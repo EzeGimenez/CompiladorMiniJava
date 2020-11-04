@@ -173,7 +173,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             IClassReference superClass = herencia();
             Collection<IClassReference> interfaceList = implementa();
 
-            ST.getCurrClass().setGenericClassRef(genericClass);
+            ST.getCurrClass().setGenericType(genericClass);
             ST.getCurrClass().setParentClass(superClass);
             for (IClassReference i : interfaceList) {
                 if (!ST.getCurrClass().containsInterfaceInheritance(i.getName())) {
@@ -209,7 +209,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             IClassReference genericClass = genericidad();
             Collection<IClassReference> interfaceList = herenciaInterfaz();
 
-            ST.getCurrInterface().setGenericClass(genericClass);
+            ST.getCurrInterface().setGenericType(genericClass);
             for (IClassReference i : interfaceList) {
                 ST.getCurrInterface().addInheritance(i);
             }
@@ -225,7 +225,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (!ST.containsInterface(ST.getCurrInterface().getName())) {
             ST.addInterface(ST.getCurrInterface());
         } else {
-            throw buildSemanticException(ST.getCurrInterface(), "Ya fué declarada una interfaz con el mismo nombre");
+            throw buildSemanticException(ST.getCurrInterface(), "Ya fue declarada una interfaz con el mismo nombre");
         }
     }
 
@@ -357,7 +357,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(PRIVATE);
             attr(visibility);
         } else if (equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
-            auxAttrOCons();
+            attrOCons();
         }
     }
 
@@ -379,15 +379,12 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         return null;
     }
 
-    private void auxAttrOCons() throws SyntaxException, LexicalException, SemanticException {
+    private void attrOCons() throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(ID_CLASS)) {
             String className = currToken.getLexeme();
             IClassReference classReference = new ClassReference(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
-            IClassReference genericClass = genericidad();
-            classReference.setGenericClass(genericClass);
-
-            constructorOAttr(classReference);
+            attrOConsAUX(classReference);
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             IVisibility defaultVisibility = new Visibility("public", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
@@ -400,6 +397,26 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }
     }
 
+    //TODO design concern not to allow generic type in constructor
+    private void attrOConsAUX(IClassReference classReference) throws SyntaxException, SemanticException, LexicalException {
+        if (equalsAny(LESS_THAN)) {
+            IClassReference genericClass = genericidad();
+            classReference.setGenericClass(genericClass);
+
+            IVisibility defaultVisibility = new Visibility("public", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+
+            IType type = new ReferenceType(classReference, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+
+            asignacionAttr(defaultVisibility, defaultAccessMode, type);
+            match(SEMICOLON);
+        } else if (equalsAny(PARENTHESES_OPEN, ID_MET_VAR)) {
+            constructorOAttr(classReference);
+        } else {
+            throw buildSyntaxException("genericidad o attr");
+        }
+    }
+
     private void constructorOAttr(IClassReference classReference) throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(PARENTHESES_OPEN)) {
             constructor(classReference);
@@ -407,7 +424,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             IVisibility defaultVisibility = new Visibility("public", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
 
-            IType type = new ReferenceType(classReference.getName(), classReference.getGenericClass(), fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IType type = new ReferenceType(classReference, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
 
             asignacionAttr(defaultVisibility, defaultAccessMode, type);
         } else {
@@ -416,13 +433,17 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     }
 
     private void constructor(IClassReference classReference) throws SyntaxException, LexicalException, SemanticException {
-        IType returnType = new ReferenceType(classReference.getName(), classReference.getGenericClass(), fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        IType returnType = new ReferenceType(classReference, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         IMethod constructor = new Constructor(classReference.getName(), returnType, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         ST.setCurrMethod(constructor);
         argsFormales();
         bloque();
         if (ST.getCurrClass().getConstructor() == null) {
-            ST.getCurrClass().setConstructor(constructor);
+            if (ST.getCurrClass().getName().equals(constructor.getName())) {
+                ST.getCurrClass().setConstructor(constructor);
+            } else {
+                throw buildSemanticException(ST.getCurrMethod(), "metodo mal definido o constructor con nombre distinto a la clase");
+            }
         } else {
             throw buildSemanticException(ST.getCurrMethod(), "dos constructores en una misma clase");
         }
@@ -480,7 +501,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (!ST.getCurrClass().containsMethod(ST.getCurrMethod().getName())) {
             ST.getCurrClass().addMethod(ST.getCurrMethod());
         } else {
-            throw buildSemanticException(ST.getCurrMethod(), "nombre método duplicado");
+            throw buildSemanticException(ST.getCurrMethod(), "nombre metodo duplicado");
         }
     }
 
@@ -489,7 +510,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (!ST.getCurrInterface().containsMethod(ST.getCurrMethod().getName())) {
             ST.getCurrInterface().addMethod(ST.getCurrMethod());
         } else {
-            throw buildSemanticException(ST.getCurrMethod(), "nombre método duplicado");
+            throw buildSemanticException(ST.getCurrMethod(), "nombre metodo duplicado");
         }
 
         match(SEMICOLON);
@@ -501,9 +522,13 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             outType = tipoPrimitivo();
         } else if (equalsAny(ID_CLASS)) {
             String typeClassName = currToken.getLexeme();
+            IClassReference referencedClass = new ClassReference(typeClassName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
+
             IClassReference genericClass = genericidad();
-            outType = new ReferenceType(typeClassName, genericClass, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            referencedClass.setGenericClass(genericClass);
+
+            outType = new ReferenceType(referencedClass, referencedClass.getLine(), referencedClass.getRow(), referencedClass.getColumn());
         } else {
             throw buildSyntaxException("una definicion de tipo");
         }
@@ -603,7 +628,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (!ST.getCurrMethod().containsParameter(parameterName)) {
             ST.getCurrMethod().addParameter(parameter);
         } else {
-            throw buildSemanticException(parameter, "nombre de parámetro duplicado");
+            throw buildSemanticException(parameter, "nombre de parametro duplicado");
         }
     }
 
@@ -654,9 +679,13 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(SEMICOLON);
         } else if (equalsAny(ID_CLASS)) {
             String classTypeName = currToken.getLexeme();
+            IClassReference classRef = new ClassReference(classTypeName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
+
             IClassReference genericClass = genericidad();
-            IType classType = new ReferenceType(classTypeName, genericClass, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            classRef.setGenericClass(genericClass);
+
+            IType classType = new ReferenceType(classRef, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             accesoEstaticoODeclaracion(classType);
             match(SEMICOLON);
         } else if (equalsAny(IF)) {

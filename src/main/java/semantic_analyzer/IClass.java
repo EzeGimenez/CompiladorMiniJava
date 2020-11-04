@@ -9,7 +9,7 @@ public abstract class IClass extends Entity {
         super(name, line, row, column);
     }
 
-    public abstract IClassReference getParentClassRef();
+    public abstract IClassReference getParentClass();
 
     public abstract void setParentClass(IClassReference iClass);
 
@@ -23,9 +23,9 @@ public abstract class IClass extends Entity {
 
     public abstract void setConstructor(IMethod constructor);
 
-    public abstract IClassReference getGenericClassRef();
+    public abstract IClassReference getGenericType();
 
-    public abstract void setGenericClassRef(IClassReference genericClassRef);
+    public abstract void setGenericType(IClassReference genericClassRef);
 
     public abstract void addInterfaceInheritance(IClassReference iInterface);
 
@@ -40,4 +40,6 @@ public abstract class IClass extends Entity {
     public abstract boolean containsInterfaceInheritance(String name);
 
     protected abstract boolean hasAncestor(String name) throws SemanticException;
+
+    public abstract void consolidate() throws SemanticException;
 }

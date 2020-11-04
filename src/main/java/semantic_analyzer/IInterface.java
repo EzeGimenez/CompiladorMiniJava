@@ -13,9 +13,9 @@ public abstract class IInterface extends Entity {
 
     public abstract void addInheritance(IClassReference iInterface);
 
-    public abstract IClassReference getGenericClass();
+    public abstract IClassReference getGenericType();
 
-    public abstract void setGenericClass(IClassReference genericClass);
+    public abstract void setGenericType(IClassReference genericType);
 
     public abstract Map<String, IMethod> getMethodMap();
 
@@ -24,4 +24,6 @@ public abstract class IInterface extends Entity {
     public abstract boolean containsMethod(String name);
 
     protected abstract boolean hasAncestor(String name);
+
+    public abstract void consolidate() throws SemanticException;
 }

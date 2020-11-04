@@ -54,7 +54,7 @@ public class UIConsole implements UI {
     @Override
     public void displaySemanticError(SemanticException e) {
         System.out.println();
-        System.out.println("Error sintactico en linea " + e.getEntity().getRow() + ": " + e.getEntity().getName() + " " + e.getMessage());
+        System.out.println("Error sintactico en linea " + e.getEntity().getRow() + ": " + e.getMessage());
 
         System.out.println("Detalle: " + e.getEntity().getLine());
         String columnPointer = getColumnPointer(e.getEntity().getColumn() - e.getEntity().getName().length() + 1);

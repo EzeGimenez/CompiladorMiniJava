@@ -4,20 +4,15 @@ import java.util.Objects;
 
 public class ReferenceType extends IType {
 
-    private final IClassReference genericClass;
+    private final IClassReference referencedClass;
 
-    public ReferenceType(String name, IClassReference genericClass, String line, int row, int column) {
-        super(name, line, row, column);
-        this.genericClass = genericClass;
+    public ReferenceType(IClassReference referencedClass, String line, int row, int column) {
+        super(referencedClass.getName(), line, row, column);
+        this.referencedClass = referencedClass;
     }
 
-    public IClassReference getGenericClass() {
-        return genericClass;
-    }
-
-    @Override
-    public void consolidate() throws SemanticException {
-
+    public ReferenceType(IClassReference classReference) {
+        this(classReference, "", 0, 0);
     }
 
     @Override
@@ -27,5 +22,18 @@ public class ReferenceType extends IType {
         if (!Objects.equals(getName(), ((ReferenceType) o).getName())) {
             throw new SemanticException(this, "nombres diferentes");
         }
+    }
+
+    public IClassReference getReferencedClass() {
+        return referencedClass;
+    }
+
+    @Override
+    public void validate(IClassReference genericType) throws SemanticException {
+        referencedClass.validate(genericType);
+    }
+
+    private boolean existsClass(IType genericType) {
+        return SymbolTable.getInstance().containsClass(genericType.getName());
     }
 }

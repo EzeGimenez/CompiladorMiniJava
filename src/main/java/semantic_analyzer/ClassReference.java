@@ -9,6 +9,10 @@ public class ClassReference extends IClassReference {
         super(name, line, row, column);
     }
 
+    public ClassReference(String name) {
+        this(name, "", 0, 0);
+    }
+
     @Override
     public IClassReference getGenericClass() {
         return genericClass;
@@ -20,19 +24,24 @@ public class ClassReference extends IClassReference {
     }
 
     @Override
-    public IClassReference getDeepestMismatchClassRef(IClassReference genericClass) {
-        if (this.getName().equals(genericClass.getName())) {
-            return null;
+    public void validate(IClassReference generic) throws SemanticException {
+        if (genericClass == null) {
+            IClass referencedClass = SymbolTable.getInstance().getClass(getName());
+            if (referencedClass != null && referencedClass.getGenericType() != null) {
+                throw new SemanticException(this, "Falta el tipo parametrico de clase generica " + getName());
+            }
+            IInterface referencedInterface = SymbolTable.getInstance().getInterface(getName());
+            if (referencedInterface != null && referencedInterface.getGenericType() != null) {
+                throw new SemanticException(this, "Falta el tipo parametrico de interfaz generica " + getName());
+            }
+            if (!getName().equals(generic.getName())) {
+                throw new SemanticException(this, getName() + " no definido");
+            }
         }
-        if (this.getGenericClass() == null) {
-            return this;
+
+        if (genericClass != null) {
+            genericClass.validate(generic);
         }
-        return this.getGenericClass().getDeepestMismatchClassRef(genericClass);
-    }
-
-    @Override
-    public void consolidate() throws SemanticException {
-
     }
 
     @Override

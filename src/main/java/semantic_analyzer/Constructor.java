@@ -14,6 +14,10 @@ public class Constructor extends IMethod {
         parameterList = new ArrayList<>();
     }
 
+    public Constructor(String name, IType returnType) {
+        this(name, returnType, "", 0, 0);
+    }
+
     @Override
     public void addParameter(IParameter parameter) {
         parameterList.add(parameter);

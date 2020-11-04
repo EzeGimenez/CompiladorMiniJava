@@ -22,11 +22,6 @@ public class Variable extends IVariable {
     }
 
     @Override
-    public void consolidate() throws SemanticException {
-
-    }
-
-    @Override
     public void compareTo(Object o) throws SemanticException {
         if (o == null || getClass() != o.getClass()) throw new SemanticException(this, "diferentes");
         Variable variable = (Variable) o;
