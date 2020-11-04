@@ -9,13 +9,13 @@ public abstract class IInterface extends Entity {
         super(name, line, row, column);
     }
 
-    public abstract Collection<IClassReference> getInheritance();
+    public abstract Collection<IClassType> getInheritance();
 
-    public abstract void addInheritance(IClassReference iInterface);
+    public abstract void addInheritance(IClassType iInterface);
 
-    public abstract IClassReference getGenericType();
+    public abstract IType getGenericType();
 
-    public abstract void setGenericType(IClassReference genericType);
+    public abstract void setGenericType(IClassType genericType);
 
     public abstract Map<String, IMethod> getMethodMap();
 

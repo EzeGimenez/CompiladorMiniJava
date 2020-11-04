@@ -9,11 +9,11 @@ public abstract class IClass extends Entity {
         super(name, line, row, column);
     }
 
-    public abstract IClassReference getParentClass();
+    public abstract IClassType getParentClass();
 
-    public abstract void setParentClass(IClassReference iClass);
+    public abstract void setParentClass(IClassType iClass);
 
-    public abstract Collection<IClassReference> getInterfaceHierarchyMap();
+    public abstract Collection<IClassType> getInterfaceHierarchyMap();
 
     public abstract Map<String, IVariable> getAttributeMap();
 
@@ -23,11 +23,11 @@ public abstract class IClass extends Entity {
 
     public abstract void setConstructor(IMethod constructor);
 
-    public abstract IClassReference getGenericType();
+    public abstract IType getGenericType();
 
-    public abstract void setGenericType(IClassReference genericClassRef);
+    public abstract void setGenericType(IClassType genericClassRef);
 
-    public abstract void addInterfaceInheritance(IClassReference iInterface);
+    public abstract void addInterfaceInheritance(IClassType iInterface);
 
     public abstract void addAttribute(IVariable attribute);
 

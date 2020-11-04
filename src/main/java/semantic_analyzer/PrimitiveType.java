@@ -13,7 +13,7 @@ public abstract class PrimitiveType extends IType {
     }
 
     @Override
-    public void validate(IClassReference genericType) {
+    public void validate(IType genericType) {
 
     }
 

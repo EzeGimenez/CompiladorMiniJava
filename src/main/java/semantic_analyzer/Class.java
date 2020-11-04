@@ -7,12 +7,12 @@ import java.util.Map;
 
 public class Class extends IClass {
 
-    private final Collection<IClassReference> interfaceInheritanceList;
+    private final Collection<IClassType> interfaceInheritanceList;
     private final Map<String, IVariable> attributeMap;
     private final Map<String, IMethod> methodMap;
-    private IClassReference parentClass;
+    private IClassType parentClass;
     private IMethod constructor;
-    private IClassReference genericType;
+    private IType genericType;
     private boolean didConsolidate;
 
     public Class(String name) {
@@ -28,17 +28,17 @@ public class Class extends IClass {
     }
 
     @Override
-    public IClassReference getParentClass() {
+    public IClassType getParentClass() {
         return parentClass;
     }
 
     @Override
-    public void setParentClass(IClassReference iClass) {
+    public void setParentClass(IClassType iClass) {
         parentClass = iClass;
     }
 
     @Override
-    public Collection<IClassReference> getInterfaceHierarchyMap() {
+    public Collection<IClassType> getInterfaceHierarchyMap() {
         return interfaceInheritanceList;
     }
 
@@ -63,17 +63,17 @@ public class Class extends IClass {
     }
 
     @Override
-    public IClassReference getGenericType() {
+    public IType getGenericType() {
         return genericType;
     }
 
     @Override
-    public void setGenericType(IClassReference genericClassRef) {
+    public void setGenericType(IClassType genericClassRef) {
         this.genericType = genericClassRef;
     }
 
     @Override
-    public void addInterfaceInheritance(IClassReference iInterface) {
+    public void addInterfaceInheritance(IClassType iInterface) {
         interfaceInheritanceList.add(iInterface);
     }
 
@@ -99,7 +99,7 @@ public class Class extends IClass {
 
     @Override
     public boolean containsInterfaceInheritance(String name) {
-        for (IClassReference c : interfaceInheritanceList) {
+        for (IClassType c : interfaceInheritanceList) {
             if (c.getName().equals(name)) {
                 return true;
             }
@@ -141,6 +141,7 @@ public class Class extends IClass {
             addInheritedMethodsFromInterfaces();
             addInheritedAttributesFromParentClass();
             validateMethods();
+            validateAttributes();
         }
     }
 
@@ -150,63 +151,33 @@ public class Class extends IClass {
             parentClass.consolidate();
         }
 
-        for (IClassReference c : interfaceInheritanceList) {
+        for (IClassType c : interfaceInheritanceList) {
             IInterface iInterface = getInterfaceForReference(c);
             iInterface.consolidate();
         }
     }
 
     private void validateClassInheritance() throws SemanticException {
-        if (parentClass != null) { // TODO design concern regarding to create class Object without any parentClasses
+        if (parentClass != null) {
+            parentClass.validate(genericType);
+
             IClass classForParent = getClassForReference(parentClass);
-            if (classForParent == null) {
-                if (getInterfaceForReference(parentClass) != null) {
-                    throw new SemanticException(parentClass, "Se intenta implementar la interfaz " + parentClass.getName());
-                }
-                throw new SemanticException(genericType, "clase no definida");
-            }
             if (classForParent.hasAncestor(this.getName())) {
                 throw new SemanticException(this, "La clase sufre de herencia circular");
-            }
-            if (classForParent.getGenericType() != null) {
-                if (genericType.getGenericClass() == null) {
-                    throw new SemanticException(genericType, "Falta el tipo generico de clase generica");
-                }
-                if (genericType == null) {
-                    throw new SemanticException(this, "La clase hereda de una clase generica sin instanciar o declarar su propio tipo generico");
-                }
-                genericType.getGenericClass().validate(getGenericType());
             }
         }
     }
 
     private void validateInterfaceInheritance() throws SemanticException {
-        for (IClassReference interfaceRef : interfaceInheritanceList) {
-            IInterface parentInterface = getInterfaceForReference(interfaceRef);
-            if (parentInterface == null) {
-                if (getClassForReference(interfaceRef) != null) {
-                    throw new SemanticException(interfaceRef, "Se intenta implementar la clase " + interfaceRef.getName());
-                }
-                throw new SemanticException(interfaceRef, "interfaz no definida");
-            }
-
-            if (parentInterface.getGenericType() != null) {
-                if (interfaceRef.getGenericClass() == null) {
-                    throw new SemanticException(interfaceRef, "Falta el tipo generico de interfaz generica");
-                }
-                if (getGenericType() == null) {
-                    throw new SemanticException(this, "La interfaz hereda de una interfaz generica sin instanciar o declarar su propio tipo generico");
-                }
-                interfaceRef.getGenericClass().validate(getGenericType());
-            }
+        for (IClassType interfaceRef : interfaceInheritanceList) {
+            interfaceRef.validate(genericType);
         }
     }
 
     private void addConstructorIfMissing() {
         if (constructor == null) {
-            IClassReference classReference = new ClassReference(getName());
-            IType returnType = new ReferenceType(classReference);
-            constructor = new Constructor(getName(), returnType);
+            IClassType classType = new ClassType(getName());
+            constructor = new Constructor(getName(), classType);
         }
     }
 
@@ -225,7 +196,7 @@ public class Class extends IClass {
                 try {
                     methodWithSameName.compareTo(inheritedMethod);
                 } catch (SemanticException e) {
-                    throw new SemanticException(e.getEntity(), "; se intenta cambiar la signatura un metodo heredado: " + e.getMessage());
+                    throw new SemanticException(e.getEntity(), "; se intenta cambiar la signatura a un metodo heredado: " + e.getMessage());
                 }
             } else {
                 methodMap.put(inheritedMethod.getName(), inheritedMethod);
@@ -233,16 +204,16 @@ public class Class extends IClass {
         }
     }
 
-    private IInterface getInterfaceForReference(IClassReference c) {
+    private IInterface getInterfaceForReference(IClassType c) {
         return SymbolTable.getInstance().getInterface(c.getName());
     }
 
-    private IClass getClassForReference(IClassReference c) {
+    private IClass getClassForReference(IClassType c) {
         return SymbolTable.getInstance().getClass(c.getName());
     }
 
     private void addInheritedMethodsFromInterfaces() throws SemanticException {
-        for (IClassReference c : interfaceInheritanceList) {
+        for (IClassType c : interfaceInheritanceList) {
             IInterface iInterface = getInterfaceForReference(c);
             addMethodsFromInterface(iInterface);
         }
@@ -260,7 +231,7 @@ public class Class extends IClass {
                 }
             } else {
                 SemanticException methodNotImplException = new SemanticException(this,
-                        "la clase no implementa el metodo "
+                        "la clase " + getName() + " no implementa el metodo "
                                 + inheritedMethod.getName() +
                                 " de la interfaz " +
                                 iInterface.getName());
@@ -294,6 +265,12 @@ public class Class extends IClass {
             } catch (SemanticException e) {
                 SymbolTable.getInstance().saveException(e);
             }
+        }
+    }
+
+    private void validateAttributes() throws SemanticException {
+        for (IVariable v : attributeMap.values()) {
+            v.validate(genericType); //TODO design concer to pass generic type in order to checkif class exissts, if corresponding
         }
     }
 

@@ -18,14 +18,11 @@ public abstract class IMethod extends Entity {
 
     public abstract boolean containsParameter(String parameterName);
 
-    public void validate(IClassReference genericTypeRef) throws SemanticException {
-        if (getReturnType() != null) validateType(genericTypeRef, getReturnType());
-        for (IParameter p : getParameterList()) {
-            validateType(genericTypeRef, p.getType());
-        }
-    }
+    public void validate(IType genericTypeRef) throws SemanticException {
+        if (getReturnType() != null) getReturnType().validate(genericTypeRef);
 
-    private void validateType(IClassReference genericType, IType type) throws SemanticException {
-        type.validate(genericType);
+        for (IParameter p : getParameterList()) {
+            p.getType().validate(genericTypeRef);
+        }
     }
 }

@@ -34,18 +34,6 @@ public class SymbolTable implements ISymbolTable {
         instance = null;
     }
 
-    public static boolean isPrimitive(IType type) {
-        String strType = type.getName();
-        switch (strType) {
-            case "boolean":
-            case "String":
-            case "char":
-            case "int":
-                return true;
-        }
-        return false;
-    }
-
     private void createDefaultClasses() { // TODO design concern regarding their creation first
         IClass objectClass = new Class("Object");
         IClass systemClass = new Class("System");
@@ -96,7 +84,7 @@ public class SymbolTable implements ISymbolTable {
         systemClass.addMethod(printIlnMethod);
         systemClass.addMethod(printSlnMethod);
 
-        IClassReference objectClassReference = new ClassReference(objectClass.getName());
+        ClassType objectClassReference = new ClassType(objectClass.getName());
         systemClass.setParentClass(objectClassReference);
 
         addClass(objectClass);

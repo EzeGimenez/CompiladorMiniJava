@@ -8,4 +8,6 @@ public abstract class IVariable extends Entity {
     abstract IType getType();
 
     abstract IVisibility getVisibility();
+
+    public abstract void validate(IType genericType) throws SemanticException;
 }

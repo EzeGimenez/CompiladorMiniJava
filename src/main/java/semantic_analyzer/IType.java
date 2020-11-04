@@ -6,5 +6,5 @@ public abstract class IType extends Entity {
         super(name, line, row, column);
     }
 
-    public abstract void validate(IClassReference genericType) throws SemanticException;
+    public abstract void validate(IType genericType) throws SemanticException;
 }
