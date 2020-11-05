@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 import java.util.Collection;
 import java.util.Map;
 

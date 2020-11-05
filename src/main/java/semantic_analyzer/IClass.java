@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 import java.util.Collection;
 import java.util.Map;
 
@@ -13,7 +15,7 @@ public abstract class IClass extends Entity {
 
     public abstract void setParentClass(IClassType iClass);
 
-    public abstract Collection<IClassType> getInterfaceHierarchyMap();
+    public abstract Collection<IClassType> getInterfaceInheritanceList();
 
     public abstract Map<String, IVariable> getAttributeMap();
 

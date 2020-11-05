@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 import java.util.Objects;
 
 public class Visibility extends IVisibility {

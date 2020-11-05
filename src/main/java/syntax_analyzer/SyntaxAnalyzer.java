@@ -1,5 +1,9 @@
 package syntax_analyzer;
 
+import exceptions.CompilerException;
+import exceptions.LexicalException;
+import exceptions.SemanticException;
+import exceptions.SyntaxException;
 import lexical_analyzer.*;
 import semantic_analyzer.Class;
 import semantic_analyzer.*;
@@ -14,7 +18,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private final ILexicalAnalyzer lexicalAnalyzer;
     private final FileHandler fileHandler;
-    private final List<Exception> exceptionList;
+    private final List<CompilerException> exceptionList;
     private final SymbolTable ST;
     private IToken currToken;
 
@@ -32,9 +36,9 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     }
 
     @Override
-    public void validate() throws Exception {
+    public void validate() throws CompilerException {
         if (exceptionList.size() > 0) {
-            Exception e = exceptionList.get(0);
+            CompilerException e = exceptionList.get(0);
             exceptionList.remove(e);
             throw e;
         }
@@ -110,7 +114,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         return out;
     }
 
-    private void saveException(Exception e) {
+    private void saveException(CompilerException e) {
         exceptionList.add(e);
     }
 
@@ -130,7 +134,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             listaClases();
             match(EOF);
 
-        } catch (Exception e) {
+        } catch (CompilerException e) {
             saveException(e);
         }
     }
@@ -144,7 +148,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             } else {
                 throw buildSyntaxException("clase o interfaz");
             }
-        } catch (Exception e) {
+        } catch (CompilerException e) {
             saveException(e);
             updateTokenUntilSentinel(CLASS, INTERFACE, EOF);
         }
@@ -169,9 +173,9 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(ID_CLASS);
 
             ST.setCurrClass(classEntry);
-            ClassType genericClass = genericidad();
-            ClassType superClass = herencia();
-            Collection<ClassType> interfaceList = implementa();
+            IClassType genericClass = genericidad();
+            IClassType superClass = herencia();
+            Collection<IClassType> interfaceList = implementa();
 
             ST.getCurrClass().setGenericType(genericClass);
             ST.getCurrClass().setParentClass(superClass);
@@ -179,7 +183,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
                 if (!ST.getCurrClass().containsInterfaceInheritance(i.getName())) {
                     ST.getCurrClass().addInterfaceInheritance(i);
                 } else {
-                    saveException(buildSemanticException(i, "herencia de interfaz duplicada")); //TODO design concern to save & coninue
+                    saveException(buildSemanticException(i, "herencia de interfaz duplicada"));
                 }
             }
         } catch (SyntaxException e) {
@@ -206,8 +210,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
             ST.setCurrInterface(interfaceEntry);
 
-            ClassType genericClass = genericidad();
-            Collection<ClassType> interfaceList = herenciaInterfaz();
+            IClassType genericClass = genericidad();
+            Collection<IClassType> interfaceList = herenciaInterfaz();
 
             ST.getCurrInterface().setGenericType(genericClass);
             for (IClassType i : interfaceList) {
@@ -229,14 +233,14 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }
     }
 
-    private ClassType genericidad() throws SyntaxException {
-        ClassType outClassRef = null;
+    private IClassType genericidad() throws SyntaxException {
+        IClassType outClassRef = null;
         if (equalsAny(LESS_THAN)) {
             match(LESS_THAN);
             String className = currToken.getLexeme();
             outClassRef = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
-            ClassType genericClass = genericidad();
+            IClassType genericClass = genericidad();
             match(GREATER_THAN);
             outClassRef.setGenericType(genericClass);
 
@@ -246,13 +250,40 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         return outClassRef;
     }
 
-    private ClassType herencia() throws SyntaxException {
+    private IClassType genericidadImplicita() throws SyntaxException {
+        IClassType outClassRef = null;
+        if (equalsAny(LESS_THAN)) {
+            match(LESS_THAN);
+            outClassRef = genericidadImplicitaAUX();
+            match(GREATER_THAN);
+        } else if (!equalsAny(EXTENDS, IMPLEMENTS, BRACES_OPEN, GREATER_THAN, COMMA, ID_MET_VAR, DOT, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, SEMICOLON, PARENTHESES_OPEN)) {
+            throw buildSyntaxException("token siguiente a genericidad");
+        }
+        return outClassRef;
+    }
+
+    private IClassType genericidadImplicitaAUX() throws SyntaxException {
+        IClassType outClassRef = null;
+        if (equalsAny(ID_CLASS)) {
+            String className = currToken.getLexeme();
+            outClassRef = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            match(ID_CLASS);
+            IClassType genericClass = genericidad();
+            match(GREATER_THAN);
+            outClassRef.setGenericType(genericClass);
+        } else if (!equalsAny(GREATER_THAN)) {
+            throw buildSyntaxException(">");
+        }
+        return outClassRef;
+    }
+
+    private IClassType herencia() throws SyntaxException {
         if (equalsAny(EXTENDS)) {
             match(EXTENDS);
             String className = currToken.getLexeme();
-            ClassType classReference = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IClassType classReference = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
-            ClassType genericClass = genericidad();
+            IClassType genericClass = genericidad();
             classReference.setGenericType(genericClass);
 
             return classReference;
@@ -262,8 +293,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         return new ClassType("Object", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
     }
 
-    private Collection<ClassType> implementa() throws SyntaxException {
-        Collection<ClassType> inheritanceEntities = new ArrayList<>();
+    private Collection<IClassType> implementa() throws SyntaxException {
+        Collection<IClassType> inheritanceEntities = new ArrayList<>();
         if (equalsAny(IMPLEMENTS)) {
             match(IMPLEMENTS);
             inheritanceEntities = listaInterfaces();
@@ -273,19 +304,19 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         return inheritanceEntities;
     }
 
-    private Collection<ClassType> listaInterfaces() throws SyntaxException {
+    private Collection<IClassType> listaInterfaces() throws SyntaxException {
         String className = currToken.getLexeme();
-        ClassType inheritanceEntity = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        IClassType inheritanceEntity = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         match(ID_CLASS);
-        ClassType genericClass = genericidad();
+        IClassType genericClass = genericidad();
         inheritanceEntity.setGenericType(genericClass);
 
-        Collection<ClassType> out = listaInterfacesAux();
+        Collection<IClassType> out = listaInterfacesAux();
         out.add(inheritanceEntity);
         return out;
     }
 
-    private Collection<ClassType> listaInterfacesAux() throws SyntaxException {
+    private Collection<IClassType> listaInterfacesAux() throws SyntaxException {
         if (equalsAny(COMMA)) {
             match(COMMA);
             return listaInterfaces();
@@ -295,7 +326,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         return new ArrayList<>();
     }
 
-    private Collection<ClassType> herenciaInterfaz() throws SyntaxException {
+    private Collection<IClassType> herenciaInterfaz() throws SyntaxException {
         if (equalsAny(EXTENDS)) {
             match(EXTENDS);
             return listaInterfaces();
@@ -309,7 +340,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(PUBLIC, PROTECTED, PRIVATE, ID_CLASS, STATIC, DYNAMIC, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             try {
                 miembro();
-            } catch (Exception e) {
+            } catch (CompilerException e) {
                 saveException(e);
                 updateTokenUntilSentinel(ID_CLASS, PUBLIC, PROTECTED, PRIVATE, STATIC, DYNAMIC, BRACES_CLOSE);
             }
@@ -323,7 +354,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(STATIC, DYNAMIC)) {
             try {
                 metodoDeclaracion();
-            } catch (Exception e) {
+            } catch (CompilerException e) {
                 saveException(e);
                 updateTokenUntilSentinel(SEMICOLON, ID_CLASS, PUBLIC, PROTECTED, PRIVATE, STATIC, DYNAMIC, BRACES_CLOSE);
             }
@@ -382,7 +413,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private void attrOCons() throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(ID_CLASS)) {
             String className = currToken.getLexeme();
-            ClassType classReference = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IClassType classReference = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
             attrOConsAUX(classReference);
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
@@ -397,10 +428,9 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }
     }
 
-    //TODO design concern not to allow generic type in constructor
     private void attrOConsAUX(IClassType classType) throws SyntaxException, SemanticException, LexicalException {
         if (equalsAny(LESS_THAN)) {
-            ClassType genericClass = genericidad();
+            IClassType genericClass = genericidad();
             classType.setGenericType(genericClass);
 
             IVisibility defaultVisibility = new Visibility("public", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
@@ -520,7 +550,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             IClassType classType = new ClassType(typeClassName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
 
-            ClassType genericClass = genericidad();
+            IClassType genericClass = genericidad();
             classType.setGenericType(genericClass);
 
             outType = classType;
@@ -597,7 +627,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private void listaArgsFormales() throws LexicalException, SyntaxException {
         try {
             argFormal();
-        } catch (Exception e) {
+        } catch (CompilerException e) {
             saveException(e);
             updateTokenUntilSentinel(COMMA, PARENTHESES_CLOSE);
         }
@@ -631,7 +661,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         match(BRACES_OPEN);
         try {
             listaSentencias();
-        } catch (Exception e) {
+        } catch (CompilerException e) {
             saveException(e);
             updateTokenUntilSentinel(BRACES_CLOSE);
         }
@@ -643,7 +673,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
             try {
                 sentencia();
-            } catch (Exception e) {
+            } catch (CompilerException e) {
                 saveException(e);
                 updateTokenUntilSentinel(SEMICOLON, BRACES_OPEN, BRACES_CLOSE);
             }
@@ -677,7 +707,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             IClassType classType = new ClassType(classTypeName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
 
-            ClassType genericClass = genericidad();
+            IClassType genericClass = genericidad();
             classType.setGenericType(genericClass);
 
             accesoEstaticoODeclaracion(classType);
@@ -1038,7 +1068,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(NEW)) {
             match(NEW);
             match(ID_CLASS);
-            genericidad();
+            IClassType genericidad = genericidadImplicita();
             argsActuales();
         } else {
             throw buildSyntaxException("new");
@@ -1062,7 +1092,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private void listaExps() throws LexicalException, SyntaxException {
         try {
             expresion();
-        } catch (Exception e) {
+        } catch (CompilerException e) {
             saveException(e);
             updateTokenUntilSentinel(COMMA, PARENTHESES_CLOSE);
         }
@@ -1091,7 +1121,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         try {
             match(DOT);
             match(ID_MET_VAR);
-        } catch (Exception e) {
+        } catch (CompilerException e) {
             saveException(e);
             updateTokenUntilSentinel(PARENTHESES_OPEN, SEMICOLON);
         }

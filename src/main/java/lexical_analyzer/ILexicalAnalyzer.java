@@ -1,5 +1,7 @@
 package lexical_analyzer;
 
+import exceptions.LexicalException;
+
 /**
  * Interfaz en representacion de la abstraccion del módulo de Analizador Léxico
  */

@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 import java.util.Objects;
 
 public class ClassType extends IClassType {
@@ -28,20 +30,33 @@ public class ClassType extends IClassType {
         IClass referencedClass = SymbolTable.getInstance().getClass(getName());
         IInterface referencedInterface = SymbolTable.getInstance().getInterface(getName());
 
-        if (genericType == null) { //TODO check if its a class or interface see error on herenciaError.java
-            if (referencedClass == null &&
-                    referencedInterface == null &&
-                    !equalsToGenericType(genericTypeFromHolderClass)) {
-                throw new SemanticException(this, getName() + " no esta definido");
+        if (referencedClass == null &&
+                referencedInterface == null &&
+                !equalsToGenericType(genericTypeFromHolderClass)) {
+            throw new SemanticException(this, getName() + " no esta definido");
+        }
 
-            } else if (referencedClass != null && referencedClass.getGenericType() != null) {
+        if (genericType == null) {
+            if (referencedClass != null && referencedClass.getGenericType() != null) {
                 throw new SemanticException(this, "Falta el tipo parametrico de clase generica " + getName());
-
-            } else if (referencedInterface != null && referencedInterface.getGenericType() != null) {
+            }
+            if (referencedInterface != null && referencedInterface.getGenericType() != null) {
                 throw new SemanticException(this, "Falta el tipo parametrico de interfaz generica " + getName());
             }
+
         } else {
             genericType.validate(genericTypeFromHolderClass);
+        }
+    }
+
+    @Override
+    public void validateOverwrite(IClassType ancestorClassRef, IType ancestorType) throws SemanticException {
+        validate(ancestorClassRef.getGenericType());
+        if (ancestorType.getClass() != getClass()) {
+            throw new SemanticException(this, "distinto tipo");
+        }
+        if (!equalsToGenericType(ancestorClassRef.getGenericType())) {
+            throw new SemanticException(this, getName() + " no esta definido");
         }
     }
 

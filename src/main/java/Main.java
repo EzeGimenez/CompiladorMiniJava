@@ -5,7 +5,7 @@ public class Main {
             System.out.println("Debe incluir el nombre del archivo en los argumentos del programa");
         } else {
             String fileName = args[0];
-            ModuloPrincipal moduloPrincipal = new ModuloPrincipalSyntactic(fileName);
+            ModuloPrincipal moduloPrincipal = new ModuloPrincipalSemantic(fileName);
         }
     }
 }

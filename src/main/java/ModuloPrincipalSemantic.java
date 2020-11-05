@@ -1,11 +1,10 @@
+import exceptions.CompilerException;
+import exceptions.SemanticException;
 import lexical_analyzer.FileHandler;
 import lexical_analyzer.FileHandlerImpl;
-import lexical_analyzer.LexicalException;
-import semantic_analyzer.SemanticException;
 import semantic_analyzer.SymbolTable;
 import syntax_analyzer.ISyntaxAnalyzer;
 import syntax_analyzer.SyntaxAnalyzer;
-import syntax_analyzer.SyntaxException;
 
 import java.io.FileNotFoundException;
 
@@ -42,15 +41,9 @@ public class ModuloPrincipalSemantic implements ModuloPrincipal {
             try {
                 syntaxAnalyzer.validate();
                 halt = true;
-            } catch (SyntaxException e) {
+            } catch (CompilerException e) {
                 hasExceptions = true;
-                displaySyntaxErrorMesssage(e);
-            } catch (LexicalException e) {
-                hasExceptions = true;
-                displayLexicalErrorMessage(e);
-            } catch (SemanticException e) {
-                hasExceptions = true;
-                displaySemanticErrorMessage(e);
+                userUI.displayCompilerError(e);
             } catch (Exception e) {
                 hasExceptions = true;
                 e.printStackTrace();
@@ -69,26 +62,15 @@ public class ModuloPrincipalSemantic implements ModuloPrincipal {
                 halt = true;
             } catch (SemanticException e) {
                 hasExceptions = true;
-                userUI.displaySemanticError(e);
+                userUI.displayCompilerError(e);
             }
         }
 
         return hasExceptions;
     }
 
-    private void displaySemanticErrorMessage(SemanticException e) {
-        userUI.displaySemanticError(e);
-    }
 
     private void reportFileNotFound(String fileName) {
         userUI.displayError("File Not Found: " + fileName);
-    }
-
-    private void displayLexicalErrorMessage(LexicalException exception) {
-        userUI.displayLexicalError(exception);
-    }
-
-    private void displaySyntaxErrorMesssage(SyntaxException exception) {
-        userUI.displaySyntaxError(exception);
     }
 }

@@ -2,6 +2,7 @@ package lexical_analyzer;
 
 import data_structures.Trie;
 import data_structures.TrieDescriptor;
+import exceptions.LexicalException;
 
 import static lexical_analyzer.TokenDescriptor.*;
 

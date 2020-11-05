@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -99,8 +101,19 @@ public class Interface extends IInterface {
 
     private void validateInheritance() throws SemanticException {
         for (IClassType interfaceRef : inheritance) {
+            IInterface parentInterface = getInterfaceForReference(interfaceRef);
+            if (parentInterface == null) {
+                if (getClassForReference(interfaceRef) != null) {
+                    throw new SemanticException(interfaceRef, "Se intenta implementar la clase " + interfaceRef.getName());
+                }
+                throw new SemanticException(interfaceRef, "interfaz no definida");
+            }
             interfaceRef.validate(genericType);
         }
+    }
+
+    private IClass getClassForReference(IClassType c) {
+        return SymbolTable.getInstance().getClass(c.getName());
     }
 
     private IInterface getInterfaceForReference(IClassType c) {
@@ -109,18 +122,18 @@ public class Interface extends IInterface {
 
     private void addInheritedMethods() throws SemanticException {
         for (IClassType c : inheritance) {
-            IInterface iInterface = getInterfaceForReference(c);
-            addMethodsFromInterface(iInterface);
+            addMethodsFromInterface(c);
         }
     }
 
-    private void addMethodsFromInterface(IInterface iInterface) throws SemanticException {
+    private void addMethodsFromInterface(IClassType interfaceRef) throws SemanticException {
         IMethod methodWithSameName;
+        IInterface iInterface = getInterfaceForReference(interfaceRef);
         for (IMethod inheritedMethod : iInterface.getMethodMap().values()) {
             methodWithSameName = methodMap.get(inheritedMethod.getName());
             if (methodWithSameName != null) {
                 try {
-                    methodWithSameName.compareTo(inheritedMethod);
+                    methodWithSameName.validateOverwrite(interfaceRef, inheritedMethod);
                 } catch (SemanticException e) {
                     throw new SemanticException(e.getEntity(), "se intenta cambiar la signatura a un metodo heredado: " + e.getMessage());
                 }

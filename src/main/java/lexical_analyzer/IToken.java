@@ -4,7 +4,6 @@ package lexical_analyzer;
  * Abstracción de un Token, contiene además los descriptores de los Tokens
  */
 public interface IToken {
-    //TODO migrado a ENUM
 
     /**
      * Obtiene el descriptor del token que representa

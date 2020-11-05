@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -8,7 +10,7 @@ import java.util.Map;
 public class Class extends IClass {
 
     private final Collection<IClassType> interfaceInheritanceList;
-    private final Map<String, IVariable> attributeMap;
+    private final Map<String, IVariable> attributeMap, inheritedAttributesMap;
     private final Map<String, IMethod> methodMap;
     private IClassType parentClass;
     private IMethod constructor;
@@ -22,9 +24,14 @@ public class Class extends IClass {
     public Class(String name, String line, int row, int column) {
         super(name, line, row, column);
         attributeMap = new HashMap<>();
+        inheritedAttributesMap = new HashMap<>();
         methodMap = new HashMap<>();
         interfaceInheritanceList = new ArrayList<>();
         didConsolidate = false;
+    }
+
+    public Map<String, IVariable> getInheritedAttributesMap() {
+        return inheritedAttributesMap;
     }
 
     @Override
@@ -38,7 +45,7 @@ public class Class extends IClass {
     }
 
     @Override
-    public Collection<IClassType> getInterfaceHierarchyMap() {
+    public Collection<IClassType> getInterfaceInheritanceList() {
         return interfaceInheritanceList;
     }
 
@@ -112,7 +119,7 @@ public class Class extends IClass {
         if (getName().equals(name)) {
             return true;
         }
-        if (parentClass == null) { // TODO design concern regarding to create class Object without any parentClasses
+        if (parentClass == null) {
             return false;
         }
 
@@ -125,7 +132,7 @@ public class Class extends IClass {
     }
 
     @Override
-    public void compareTo(Object o) throws SemanticException {
+    public void compareTo(Object o) {
 
     }
 
@@ -159,9 +166,14 @@ public class Class extends IClass {
 
     private void validateClassInheritance() throws SemanticException {
         if (parentClass != null) {
-            parentClass.validate(genericType);
-
             IClass classForParent = getClassForReference(parentClass);
+            if (classForParent == null) {
+                if (getInterfaceForReference(parentClass) != null) {
+                    throw new SemanticException(parentClass, "Se intenta implementar la interfaz " + parentClass.getName());
+                }
+                throw new SemanticException(genericType, parentClass.getName() + " clase no definida");
+            }
+            parentClass.validate(genericType);
             if (classForParent.hasAncestor(this.getName())) {
                 throw new SemanticException(this, "La clase sufre de herencia circular");
             }
@@ -170,6 +182,13 @@ public class Class extends IClass {
 
     private void validateInterfaceInheritance() throws SemanticException {
         for (IClassType interfaceRef : interfaceInheritanceList) {
+            IInterface parentInterface = getInterfaceForReference(interfaceRef);
+            if (parentInterface == null) {
+                if (getClassForReference(interfaceRef) != null) {
+                    throw new SemanticException(interfaceRef, "Se intenta implementar la clase " + interfaceRef.getName());
+                }
+                throw new SemanticException(interfaceRef, "interfaz no definida");
+            }
             interfaceRef.validate(genericType);
         }
     }
@@ -193,11 +212,7 @@ public class Class extends IClass {
         for (IMethod inheritedMethod : iClass.getMethodMap().values()) {
             methodWithSameName = methodMap.get(inheritedMethod.getName());
             if (methodWithSameName != null) {
-                try {
-                    methodWithSameName.compareTo(inheritedMethod);
-                } catch (SemanticException e) {
-                    throw new SemanticException(e.getEntity(), "; se intenta cambiar la signatura a un metodo heredado: " + e.getMessage());
-                }
+                methodWithSameName.validateOverwrite(parentClass, inheritedMethod);
             } else {
                 methodMap.put(inheritedMethod.getName(), inheritedMethod);
             }
@@ -214,21 +229,17 @@ public class Class extends IClass {
 
     private void addInheritedMethodsFromInterfaces() throws SemanticException {
         for (IClassType c : interfaceInheritanceList) {
-            IInterface iInterface = getInterfaceForReference(c);
-            addMethodsFromInterface(iInterface);
+            addMethodsFromInterface(c);
         }
     }
 
-    private void addMethodsFromInterface(IInterface iInterface) throws SemanticException {
+    private void addMethodsFromInterface(IClassType interfaceRef) throws SemanticException {
         IMethod methodWithSameName;
+        IInterface iInterface = getInterfaceForReference(interfaceRef);
         for (IMethod inheritedMethod : iInterface.getMethodMap().values()) {
             methodWithSameName = methodMap.get(inheritedMethod.getName());
             if (methodWithSameName != null) {
-                try {
-                    methodWithSameName.compareTo(inheritedMethod);
-                } catch (SemanticException e) {
-                    throw new SemanticException(e.getEntity(), "se intenta cambiar la signatura a un metodo heredado: " + e.getMessage());
-                }
+                methodWithSameName.validateOverwrite(interfaceRef, inheritedMethod);
             } else {
                 SemanticException methodNotImplException = new SemanticException(this,
                         "la clase " + getName() + " no implementa el metodo "
@@ -236,7 +247,7 @@ public class Class extends IClass {
                                 " de la interfaz " +
                                 iInterface.getName());
 
-                SymbolTable.getInstance().saveException(methodNotImplException); //TODO design concern to continue
+                SymbolTable.getInstance().saveException(methodNotImplException);
             }
         }
     }
@@ -247,10 +258,7 @@ public class Class extends IClass {
             for (IVariable v : parentClass.getAttributeMap().values()) {
                 IVariable variableWithSameName = attributeMap.get(v.getName());
                 if (variableWithSameName != null) {
-                    SemanticException methodNotImplException = new SemanticException(variableWithSameName,
-                            "atributo con el mismo nombre que el de la clase ancestro " + parentClass.getName());
-
-                    SymbolTable.getInstance().saveException(methodNotImplException); //TODO design concern to continue
+                    inheritedAttributesMap.put(v.getName(), v);
                 } else {
                     attributeMap.put(v.getName(), v);
                 }
@@ -270,7 +278,7 @@ public class Class extends IClass {
 
     private void validateAttributes() throws SemanticException {
         for (IVariable v : attributeMap.values()) {
-            v.validate(genericType); //TODO design concer to pass generic type in order to checkif class exissts, if corresponding
+            v.validate(genericType);
         }
     }
 

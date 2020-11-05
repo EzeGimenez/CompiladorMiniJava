@@ -46,8 +46,4 @@ public class Constructor extends IMethod {
         return parameterList;
     }
 
-    @Override
-    public void compareTo(Object o) throws SemanticException {
-
-    }
 }

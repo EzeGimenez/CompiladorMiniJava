@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -30,11 +32,11 @@ public class SymbolTable implements ISymbolTable {
         return instance;
     }
 
-    public static void invalidate() { //TODO design concern
+    public static void invalidate() {
         instance = null;
     }
 
-    private void createDefaultClasses() { // TODO design concern regarding their creation first
+    private void createDefaultClasses() {
         IClass objectClass = new Class("Object");
         IClass systemClass = new Class("System");
 
@@ -177,7 +179,27 @@ public class SymbolTable implements ISymbolTable {
                 saveException(e);
             }
         }
+        if (!doesExistMainMethod()) {
+            IClass c = new Class("");
+            saveException(new SemanticException(c, "debe incluirse un metodo estatico main sin tipo de retorno"));
+        }
     }
+
+    private boolean doesExistMainMethod() {
+        IMethod main;
+        for (IClass c : classMap.values()) {
+            main = c.getMethodMap().get("main");
+            if (main != null) {
+                if (main.getReturnType() == null &&
+                        main.getParameterList().size() == 0
+                        && main.getAccessMode().getName().equals("static")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 
     @Override
     public void saveException(SemanticException e) {

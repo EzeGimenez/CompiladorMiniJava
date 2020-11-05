@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 public class Parameter extends IParameter {
 
     private final IType type;

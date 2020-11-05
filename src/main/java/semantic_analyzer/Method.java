@@ -50,30 +50,4 @@ public class Method extends IMethod {
         return false;
     }
 
-    @Override
-    public void compareTo(Object o) throws SemanticException {
-
-        if (o == null || getClass() != o.getClass()) throw new SemanticException(this, "diferentes");
-
-        Method method = (Method) o;
-        if (!getName().equals(method.getName())) throw new SemanticException(this, "nombre diferente");
-
-        accessMode.compareTo(method.getAccessMode());
-        if (returnType != null) {
-            try {
-                returnType.compareTo(method.getReturnType());
-            } catch (SemanticException e) {
-                throw new SemanticException(e.getEntity(), "diferente tipo de retorno");
-            }
-        }
-
-        List<IParameter> methodParameters = method.getParameterList();
-        if (parameterList.size() != methodParameters.size()) {
-            throw new SemanticException(this, "diferente cantidad de parametros: " + "se encontraron " + parameterList.size() + " donde deberia haber " + methodParameters.size());
-        }
-        for (int i = 0; i < parameterList.size(); i++) {
-            parameterList.get(0).compareTo(methodParameters.get(0));
-        }
-    }
-
 }

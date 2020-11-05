@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 public abstract class IType extends Entity {
 
     public IType(String name, String line, int row, int column) {
@@ -7,4 +9,6 @@ public abstract class IType extends Entity {
     }
 
     public abstract void validate(IType genericType) throws SemanticException;
+
+    public abstract void validateOverwrite(IClassType ancestorClassRef, IType ancestorType) throws SemanticException;
 }

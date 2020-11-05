@@ -1,3 +1,4 @@
+import exceptions.LexicalException;
 import lexical_analyzer.*;
 
 import java.io.FileNotFoundException;
@@ -30,16 +31,12 @@ public class ModuloPrincipalLexical implements ModuloPrincipal {
                 currentToken = ILexicalAnalyzer.nextToken();
                 userUI.displayMessage(currentToken.toString());
             } catch (LexicalException e) {
-                displayLexicalErrorMessage(e);
+                userUI.displayCompilerError(e);
             }
         }
     }
 
     private void reportFileNotFound(String fileName) {
         userUI.displayError("File Not Found: " + fileName);
-    }
-
-    private void displayLexicalErrorMessage(LexicalException e) {
-        userUI.displayLexicalError(e);
     }
 }

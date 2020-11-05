@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 public class Variable extends IVariable {
 
     private final IType type;
