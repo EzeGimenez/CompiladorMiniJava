@@ -7,35 +7,42 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class TestUI {
+public class UIBeautified implements UI {
+    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_RESET = "\u001B[0m";
 
-    public void display(String filename, List<CompilerException> exceptions) throws IOException {
+    public void display(String filename, List<CompilerException> exceptions) {
         List<String> fileAsStringList = getFileAsStringList(filename);
         exceptions.sort(new ExceptionComparator());
         int i = 0;
         for (CompilerException e : exceptions) {
             if (e.getRow() > 0 && e.getRow() <= fileAsStringList.size()) {
-                fileAsStringList.add(
-                        e.getRow() + i++,
-                        getColumnError(e)
-                );
+                //fileAsStringList.add(e.getRow() + i++,ANSI_RED + getColumnError(e) + ANSI_RESET);
+                fileAsStringList.add(e.getRow() + i++, getColumnError(e));
             } else {
+                //fileAsStringList.add(ANSI_RED + "Error: " + e.getMessage() + ANSI_RESET);
                 fileAsStringList.add("Error: " + e.getMessage());
             }
         }
+
         for (String s : fileAsStringList) {
             System.out.println(s);
         }
     }
 
-    private List<String> getFileAsStringList(String filename) throws IOException {
-        BufferedReader br = new BufferedReader(new FileReader(filename));
-        String line;
-        int lineNum = 1;
+    private List<String> getFileAsStringList(String filename) {
         List<String> out = new ArrayList<>();
-        while ((line = br.readLine()) != null) {
-            line = lineNum++ + "\t" + line;
-            out.add(line);
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(filename));
+            String line;
+            int lineNum = 1;
+
+            while ((line = br.readLine()) != null) {
+                line = lineNum++ + "\t" + line;
+                out.add(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         return out;
     }
@@ -55,7 +62,22 @@ public class TestUI {
         return builder.toString();
     }
 
-    private class ExceptionComparator implements Comparator<CompilerException> {
+    @Override
+    public void displayMessage(String message) {
+
+    }
+
+    @Override
+    public void displayError(String errorMessage) {
+        System.out.println(errorMessage);
+    }
+
+    @Override
+    public void displayCompilerError(CompilerException exception) {
+
+    }
+
+    private static class ExceptionComparator implements Comparator<CompilerException> {
 
         @Override
         public int compare(CompilerException o1, CompilerException o2) {

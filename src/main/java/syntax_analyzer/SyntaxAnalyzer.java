@@ -80,7 +80,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     }
 
     private SyntaxException buildSyntaxException(String expected) {
-        String message = getDisplayableMessage();
+        String message = currToken.getLexeme();
 
         return new SyntaxException(
                 fileHandler.getCurrentLine(),
@@ -100,18 +100,6 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
                 return fileHandler.getColumn() + message.length();
         }
         return fileHandler.getColumn();
-    }
-
-    private String getDisplayableMessage() {
-        String out = currToken.getLexeme();
-
-        switch (currToken.getDescriptor()) {
-            case EOF:
-                out = "fin de archivo";
-                break;
-        }
-
-        return out;
     }
 
     private void saveException(CompilerException e) {
@@ -194,10 +182,10 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         listaMiembros();
         match(BRACES_CLOSE);
 
-        if (!ST.containsClass(ST.getCurrClass().getName())) {
+        if (!ST.containsClass(ST.getCurrClass().getName()) && !ST.containsInterface(ST.getCurrClass().getName())) {
             ST.addClass(ST.getCurrClass());
         } else {
-            throw buildSemanticException(ST.getCurrClass(), "nombre de clase duplicado");
+            throw buildSemanticException(ST.getCurrClass(), "Ya fue declarada una clase/interfaz con el mismo nombre");
         }
     }
 
@@ -226,10 +214,10 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         listaMiembrosInterfaz();
         match(BRACES_CLOSE);
 
-        if (!ST.containsInterface(ST.getCurrInterface().getName())) {
+        if (!ST.containsClass(ST.getCurrInterface().getName()) && !ST.containsInterface(ST.getCurrInterface().getName())) {
             ST.addInterface(ST.getCurrInterface());
         } else {
-            throw buildSemanticException(ST.getCurrInterface(), "Ya fue declarada una interfaz con el mismo nombre");
+            throw buildSemanticException(ST.getCurrInterface(), "Ya fue declarada una clase/interfaz con el mismo nombre");
         }
     }
 
@@ -269,7 +257,6 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             outClassRef = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
             IClassType genericClass = genericidad();
-            match(GREATER_THAN);
             outClassRef.setGenericType(genericClass);
         } else if (!equalsAny(GREATER_THAN)) {
             throw buildSyntaxException(">");
@@ -453,6 +440,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
 
             asignacionAttr(defaultVisibility, defaultAccessMode, classType);
+            match(SEMICOLON);
         } else {
             throw buildSyntaxException("( o id var o metodo");
         }
@@ -602,8 +590,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             outType = tipo();
         } else if (equalsAny(VOID)) {
+            outType = new VoidType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(VOID);
-            outType = null;
         } else {
             throw buildSyntaxException("el tipo de retorno");
         }

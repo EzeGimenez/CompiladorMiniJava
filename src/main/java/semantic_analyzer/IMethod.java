@@ -36,12 +36,10 @@ public abstract class IMethod extends Entity {
     public void validateOverwrite(IClassType ancestorClassRef, IMethod ancestorMethod) throws SemanticException {
         getAccessMode().compareTo(ancestorMethod.getAccessMode());
 
-        if (getReturnType() != null) {
-            try {
-                getReturnType().validateOverwrite(ancestorClassRef, ancestorMethod.getReturnType());
-            } catch (SemanticException e) {
-                throw new SemanticException(e.getEntity(), "diferente tipo de retorno que metodo ancestro " + ancestorMethod.getName() + " de clase " + ancestorClassRef.getName());
-            }
+        try {
+            getReturnType().validateOverwrite(ancestorClassRef, ancestorMethod.getReturnType());
+        } catch (SemanticException e) {
+            throw new SemanticException(e.getEntity(), "diferente tipo de retorno que metodo ancestro " + ancestorMethod.getName() + " de clase/interfaz " + ancestorClassRef.getName());
         }
 
         List<IParameter> ancestorParameters = ancestorMethod.getParameterList();
@@ -61,4 +59,6 @@ public abstract class IMethod extends Entity {
         }
 
     }
+
+    public abstract IMethod cloneForOverwrite(String line, int row, int column);
 }

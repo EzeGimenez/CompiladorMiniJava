@@ -6,32 +6,41 @@ import semantic_analyzer.SymbolTable;
 import syntax_analyzer.ISyntaxAnalyzer;
 import syntax_analyzer.SyntaxAnalyzer;
 
-import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ModuloPrincipalSemanticBautyfied implements ModuloPrincipal {
+public class ModuloPrincipalSemanticBeautified implements ModuloPrincipal {
 
     private final List<CompilerException> exceptions;
 
-    public ModuloPrincipalSemanticBautyfied(String fileName) throws IOException {
-        TestUI userUI = new TestUI();
+    public ModuloPrincipalSemanticBeautified(String fileName) {
+        UIBeautified userUI = new UIBeautified();
         exceptions = new ArrayList<>();
 
-        FileHandler fileHandler = new FileHandlerImpl(fileName);
-        ISyntaxAnalyzer syntaxAnalyzer = new SyntaxAnalyzer(fileHandler);
+        try {
+            FileHandler fileHandler = new FileHandlerImpl(fileName);
+            ISyntaxAnalyzer syntaxAnalyzer = new SyntaxAnalyzer(fileHandler);
 
-        analyze(syntaxAnalyzer);
-        if (exceptions.size() == 0) {
-            consolidate();
+            analyze(syntaxAnalyzer);
             if (exceptions.size() == 0) {
-                System.out.println("[SinErrores]");
+                consolidate();
+                if (exceptions.size() == 0) {
+                    System.out.println("[SinErrores]");
+                }
             }
-        }
 
-        userUI.display(fileName, exceptions);
-        fileHandler.invalidate();
-        SymbolTable.invalidate();
+            userUI.display(fileName, exceptions);
+            fileHandler.invalidate();
+            SymbolTable.invalidate();
+
+        } catch (FileNotFoundException e) {
+            userUI.displayError("Archivo no encontrado");
+        }
+    }
+
+    public List<CompilerException> getCompilerExceptionList() {
+        return exceptions;
     }
 
     private void analyze(ISyntaxAnalyzer syntaxAnalyzer) {

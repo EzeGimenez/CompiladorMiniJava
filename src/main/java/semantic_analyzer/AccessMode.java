@@ -15,6 +15,11 @@ public class AccessMode extends IAccessMode {
     }
 
     @Override
+    public IAccessMode cloneForOverwrite(int row, int column) {
+        return new AccessMode(getName(), getLine(), row, column);
+    }
+
+    @Override
     public void compareTo(Object obj) throws SemanticException {
         if (obj == null || this.getClass() != obj.getClass())
             throw new SemanticException(this, "");

@@ -1,3 +1,4 @@
+import exceptions.CompilerException;
 import exceptions.SyntaxException;
 import lexical_analyzer.FileHandler;
 import lexical_analyzer.FileHandlerImpl;
@@ -5,6 +6,7 @@ import syntax_analyzer.ISyntaxAnalyzer;
 import syntax_analyzer.SyntaxAnalyzer;
 
 import java.io.FileNotFoundException;
+import java.util.List;
 
 public class ModuloPrincipalSyntactic implements ModuloPrincipal {
 
@@ -48,5 +50,10 @@ public class ModuloPrincipalSyntactic implements ModuloPrincipal {
 
     private void reportFileNotFound(String fileName) {
         userUI.displayError("File Not Found: " + fileName);
+    }
+
+    @Override
+    public List<CompilerException> getCompilerExceptionList() {
+        return null;
     }
 }

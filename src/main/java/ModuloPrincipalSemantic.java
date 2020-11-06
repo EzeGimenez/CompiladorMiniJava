@@ -7,13 +7,17 @@ import syntax_analyzer.ISyntaxAnalyzer;
 import syntax_analyzer.SyntaxAnalyzer;
 
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ModuloPrincipalSemantic implements ModuloPrincipal {
 
     private final UI userUI;
+    private final List<CompilerException> compilerExceptionList;
 
     public ModuloPrincipalSemantic(String fileName) {
         userUI = new UIConsole();
+        compilerExceptionList = new ArrayList<>();
         try {
             FileHandler fileHandler = new FileHandlerImpl(fileName);
             ISyntaxAnalyzer syntaxAnalyzer = new SyntaxAnalyzer(fileHandler);
@@ -33,6 +37,11 @@ public class ModuloPrincipalSemantic implements ModuloPrincipal {
         }
     }
 
+    @Override
+    public List<CompilerException> getCompilerExceptionList() {
+        return compilerExceptionList;
+    }
+
     private boolean analyze(ISyntaxAnalyzer syntaxAnalyzer) {
         syntaxAnalyzer.start();
         boolean halt = false;
@@ -44,9 +53,7 @@ public class ModuloPrincipalSemantic implements ModuloPrincipal {
             } catch (CompilerException e) {
                 hasExceptions = true;
                 userUI.displayCompilerError(e);
-            } catch (Exception e) {
-                hasExceptions = true;
-                e.printStackTrace();
+                compilerExceptionList.add(e);
             }
         }
         return hasExceptions;
@@ -63,12 +70,12 @@ public class ModuloPrincipalSemantic implements ModuloPrincipal {
             } catch (SemanticException e) {
                 hasExceptions = true;
                 userUI.displayCompilerError(e);
+                compilerExceptionList.add(e);
             }
         }
 
         return hasExceptions;
     }
-
 
     private void reportFileNotFound(String fileName) {
         userUI.displayError("File Not Found: " + fileName);

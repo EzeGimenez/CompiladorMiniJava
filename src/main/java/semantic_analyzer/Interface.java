@@ -104,11 +104,14 @@ public class Interface extends IInterface {
             IInterface parentInterface = getInterfaceForReference(interfaceRef);
             if (parentInterface == null) {
                 if (getClassForReference(interfaceRef) != null) {
-                    throw new SemanticException(interfaceRef, "Se intenta implementar la clase " + interfaceRef.getName());
+                    throw new SemanticException(interfaceRef, interfaceRef.getName() + " es una clase");
                 }
                 throw new SemanticException(interfaceRef, "interfaz no definida");
             }
             interfaceRef.validate(genericType);
+            if (parentInterface.hasAncestor(this.getName())) {
+                throw new SemanticException(this, "La interfaz sufre de herencia circular");
+            }
         }
     }
 

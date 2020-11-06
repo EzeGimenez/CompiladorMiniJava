@@ -16,4 +16,9 @@ public class CharType extends PrimitiveType {
     public String getName() {
         return name;
     }
+
+    @Override
+    public IType cloneForOverwrite(String line, int row, int column) {
+        return new CharType(line, row, column);
+    }
 }

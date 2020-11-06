@@ -30,6 +30,7 @@ public class Class extends IClass {
         didConsolidate = false;
     }
 
+    @Override
     public Map<String, IVariable> getInheritedAttributesMap() {
         return inheritedAttributesMap;
     }
@@ -140,15 +141,31 @@ public class Class extends IClass {
     public void consolidate() throws SemanticException {
         if (!didConsolidate) {
             didConsolidate = true;
+            genericTypeCheck();
             validateClassInheritance();
             validateInterfaceInheritance();
             consolidateAncestors();
             addConstructorIfMissing();
+
             addInheritedMethodsFromParentClass();
             addInheritedMethodsFromInterfaces();
+
             addInheritedAttributesFromParentClass();
             validateMethods();
             validateAttributes();
+        }
+    }
+
+    private void genericTypeCheck() throws SemanticException {
+        if (genericType != null) {
+            IInterface inter = SymbolTable.getInstance().getInterface(genericType.getName());
+            IClass c = SymbolTable.getInstance().getClass(genericType.getName());
+            if (inter != null) {
+                throw new SemanticException(genericType, "El tipo genrico no puede ser una interfaz");
+            }
+            if (c != null) {
+                throw new SemanticException(genericType, "El tipo generico no puede ser una clase");
+            }
         }
     }
 
@@ -169,7 +186,7 @@ public class Class extends IClass {
             IClass classForParent = getClassForReference(parentClass);
             if (classForParent == null) {
                 if (getInterfaceForReference(parentClass) != null) {
-                    throw new SemanticException(parentClass, "Se intenta implementar la interfaz " + parentClass.getName());
+                    throw new SemanticException(parentClass, parentClass.getName() + " es una interfaz");
                 }
                 throw new SemanticException(genericType, parentClass.getName() + " clase no definida");
             }
@@ -185,11 +202,14 @@ public class Class extends IClass {
             IInterface parentInterface = getInterfaceForReference(interfaceRef);
             if (parentInterface == null) {
                 if (getClassForReference(interfaceRef) != null) {
-                    throw new SemanticException(interfaceRef, "Se intenta implementar la clase " + interfaceRef.getName());
+                    throw new SemanticException(interfaceRef, interfaceRef.getName() + " es una clase");
                 }
                 throw new SemanticException(interfaceRef, "interfaz no definida");
             }
             interfaceRef.validate(genericType);
+            if (parentInterface.hasAncestor(this.getName())) {
+                throw new SemanticException(this, "La clase sufre de herencia circular");
+            }
         }
     }
 
@@ -210,11 +230,17 @@ public class Class extends IClass {
     private void addMethodsFromClass(IClass iClass) throws SemanticException {
         IMethod methodWithSameName;
         for (IMethod inheritedMethod : iClass.getMethodMap().values()) {
-            methodWithSameName = methodMap.get(inheritedMethod.getName());
-            if (methodWithSameName != null) {
-                methodWithSameName.validateOverwrite(parentClass, inheritedMethod);
-            } else {
-                methodMap.put(inheritedMethod.getName(), inheritedMethod);
+            if (!inheritedMethod.getName().equals("main")) {
+                methodWithSameName = methodMap.get(inheritedMethod.getName());
+                if (methodWithSameName != null) {
+                    methodWithSameName.validateOverwrite(parentClass, inheritedMethod);
+                } else {
+                    int columnFix = getColumn() + inheritedMethod.getName().length() + getName().length();
+                    methodMap.put(
+                            inheritedMethod.getName(),
+                            inheritedMethod.cloneForOverwrite(getLine(), getRow(), columnFix)
+                    );
+                }
             }
         }
     }
@@ -273,6 +299,11 @@ public class Class extends IClass {
             } catch (SemanticException e) {
                 SymbolTable.getInstance().saveException(e);
             }
+        }
+        try {
+            constructor.validate(genericType);
+        } catch (SemanticException e) {
+            SymbolTable.getInstance().saveException(e);
         }
     }
 

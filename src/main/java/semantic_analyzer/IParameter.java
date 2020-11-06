@@ -13,4 +13,6 @@ public abstract class IParameter extends Entity {
     public void validateOverwrite(IClassType ancestorClassRef, IParameter ancestorParameter) throws SemanticException {
         getType().validateOverwrite(ancestorClassRef, ancestorParameter.getType());
     }
+
+    public abstract IParameter cloneForOverWrite(String line, int row, int column);
 }

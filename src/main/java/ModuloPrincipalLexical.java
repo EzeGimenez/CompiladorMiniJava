@@ -1,7 +1,9 @@
+import exceptions.CompilerException;
 import exceptions.LexicalException;
 import lexical_analyzer.*;
 
 import java.io.FileNotFoundException;
+import java.util.List;
 
 import static lexical_analyzer.TokenDescriptor.EOF;
 
@@ -38,5 +40,10 @@ public class ModuloPrincipalLexical implements ModuloPrincipal {
 
     private void reportFileNotFound(String fileName) {
         userUI.displayError("File Not Found: " + fileName);
+    }
+
+    @Override
+    public List<CompilerException> getCompilerExceptionList() {
+        return null;
     }
 }

@@ -15,4 +15,9 @@ public class IntType extends PrimitiveType {
     public String getName() {
         return name;
     }
+
+    @Override
+    public IType cloneForOverwrite(String line, int row, int column) {
+        return new IntType(getLine(), row, column);
+    }
 }

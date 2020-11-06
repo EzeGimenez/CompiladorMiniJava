@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -33,12 +35,33 @@ public class Constructor extends IMethod {
         return null;
     }
 
+    public void validate(IType genericType) throws SemanticException {
+        for (IParameter p : getParameterList()) {
+            p.getType().validate(genericType);
+        }
+    }
+
     @Override
     public boolean containsParameter(String parameterName) {
         for (IParameter p : parameterList) {
             if (Objects.equals(p.getName(), parameterName)) return true;
         }
         return false;
+    }
+
+    @Override
+    public IMethod cloneForOverwrite(String line, int row, int column) {
+        IMethod out = new Constructor(
+                getName(),
+                returnType.cloneForOverwrite(line, row, column),
+                line,
+                row,
+                column
+        );
+        for (IParameter p : parameterList) {
+            out.addParameter(p.cloneForOverWrite(line, row, column));
+        }
+        return out;
     }
 
     @Override

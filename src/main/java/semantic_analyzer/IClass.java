@@ -11,6 +11,8 @@ public abstract class IClass extends Entity {
         super(name, line, row, column);
     }
 
+    public abstract Map<String, IVariable> getInheritedAttributesMap();
+
     public abstract IClassType getParentClass();
 
     public abstract void setParentClass(IClassType iClass);

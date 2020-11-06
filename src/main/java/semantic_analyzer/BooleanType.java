@@ -15,4 +15,9 @@ public class BooleanType extends PrimitiveType {
     public String getName() {
         return "boolean";
     }
+
+    @Override
+    public IType cloneForOverwrite(String line, int row, int column) {
+        return new BooleanType(line, row, column);
+    }
 }

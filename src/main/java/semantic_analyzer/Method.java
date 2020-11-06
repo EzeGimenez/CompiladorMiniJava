@@ -50,4 +50,20 @@ public class Method extends IMethod {
         return false;
     }
 
+    @Override
+    public IMethod cloneForOverwrite(String line, int row, int column) {
+        IMethod out = new Method(
+                accessMode.cloneForOverwrite(row, column),
+                returnType.cloneForOverwrite(line, row, column),
+                getName(),
+                getLine(),
+                row,
+                column
+        );
+        for (IParameter p : parameterList) {
+            out.addParameter(p.cloneForOverWrite(line, row, column));
+        }
+        return out;
+    }
+
 }

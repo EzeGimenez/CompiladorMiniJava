@@ -45,17 +45,18 @@ public class SymbolTable implements ISymbolTable {
         IType booleanType = new BooleanType();
         IType charType = new CharType();
         IType stringType = new StringType();
+        IType voidType = new VoidType();
 
         IMethod readMethod = new Method(staticAccessMode, intType, "read");
-        IMethod printBMethod = new Method(staticAccessMode, null, "printB");
-        IMethod printCMethod = new Method(staticAccessMode, null, "printC");
-        IMethod printIMethod = new Method(staticAccessMode, null, "printI");
-        IMethod printSMethod = new Method(staticAccessMode, null, "printS");
-        IMethod printlnMethod = new Method(staticAccessMode, null, "println");
-        IMethod printBlnMethod = new Method(staticAccessMode, null, "printBln");
-        IMethod printClnMethod = new Method(staticAccessMode, null, "printCln");
-        IMethod printIlnMethod = new Method(staticAccessMode, null, "printIln");
-        IMethod printSlnMethod = new Method(staticAccessMode, null, "printSln");
+        IMethod printBMethod = new Method(staticAccessMode, voidType, "printB");
+        IMethod printCMethod = new Method(staticAccessMode, voidType, "printC");
+        IMethod printIMethod = new Method(staticAccessMode, voidType, "printI");
+        IMethod printSMethod = new Method(staticAccessMode, voidType, "printS");
+        IMethod printlnMethod = new Method(staticAccessMode, voidType, "println");
+        IMethod printBlnMethod = new Method(staticAccessMode, voidType, "printBln");
+        IMethod printClnMethod = new Method(staticAccessMode, voidType, "printCln");
+        IMethod printIlnMethod = new Method(staticAccessMode, voidType, "printIln");
+        IMethod printSlnMethod = new Method(staticAccessMode, voidType, "printSln");
 
         IParameter printBParameter = new Parameter("b", booleanType);
         IParameter printCParameter = new Parameter("c", charType);
@@ -179,27 +180,34 @@ public class SymbolTable implements ISymbolTable {
                 saveException(e);
             }
         }
-        if (!doesExistMainMethod()) {
+        if (!existOneMainMethod()) {
             IClass c = new Class("");
-            saveException(new SemanticException(c, "debe incluirse un metodo estatico main sin tipo de retorno"));
+            saveException(new SemanticException(c, "debe incluirse un metodo estatico main sin tipo de retorno ni parametros"));
         }
     }
 
-    private boolean doesExistMainMethod() {
-        IMethod main;
+    private boolean existOneMainMethod() {
+        IMethod currMethod, main = null;
         for (IClass c : classMap.values()) {
-            main = c.getMethodMap().get("main");
-            if (main != null) {
-                if (main.getReturnType() == null &&
-                        main.getParameterList().size() == 0
-                        && main.getAccessMode().getName().equals("static")) {
-                    return true;
+            currMethod = c.getMethodMap().get("main");
+            if (currMethod != null) {
+                if (main == null) {
+                    if (hasCorrectMainSignature(currMethod)) {
+                        main = currMethod;
+                    }
+                } else {
+                    saveException(new SemanticException(currMethod, "Metodo main duplicado"));
                 }
             }
         }
-        return false;
+        return main != null;
     }
 
+    private boolean hasCorrectMainSignature(IMethod currMethod) {
+        return currMethod.getReturnType().getName().equals("void") &&
+                currMethod.getParameterList().size() == 0
+                && currMethod.getAccessMode().getName().equals("static");
+    }
 
     @Override
     public void saveException(SemanticException e) {

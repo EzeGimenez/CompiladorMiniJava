@@ -16,4 +16,8 @@ public class StringType extends PrimitiveType {
         return name;
     }
 
+    @Override
+    public IType cloneForOverwrite(String line, int row, int column) {
+        return new StringType(line, row, column);
+    }
 }

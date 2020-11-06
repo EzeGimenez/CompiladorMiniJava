@@ -60,6 +60,11 @@ public class ClassType extends IClassType {
         }
     }
 
+    @Override
+    public IType cloneForOverwrite(String line, int row, int column) {
+        return new ClassType(getName(), line, row, column);
+    }
+
     private boolean equalsToGenericType(IType holderClassGenericType) {
         return holderClassGenericType != null &&
                 Objects.equals(getName(), holderClassGenericType.getName());

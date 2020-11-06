@@ -21,6 +21,16 @@ public class Parameter extends IParameter {
     }
 
     @Override
+    public IParameter cloneForOverWrite(String line, int row, int column) {
+        return new Parameter(
+                getName(),
+                type.cloneForOverwrite(line, row, column),
+                line,
+                row,
+                column);
+    }
+
+    @Override
     public void compareTo(Object o) throws SemanticException {
         if (o == null || getClass() != o.getClass()) throw new SemanticException(this, "diferentes");
         Parameter parameter = (Parameter) o;
