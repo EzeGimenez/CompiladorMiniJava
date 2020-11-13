@@ -17,7 +17,11 @@ import static org.hamcrest.CoreMatchers.equalTo;
 @RunWith(Parameterized.class)
 public class ModuloPrincipalSemanticTest {
 
+<<<<<<< HEAD
     private static final String ABS_PATH = "D:\\Eze\\UNS\\4° año 2° CUARENTENA 2.0\\Compiladores e Intérpretes\\etapa 3\\Casos de Prueba\\casos";
+=======
+    private static final String ABS_PATH = "C:\\Users\\ezegi\\Desktop\\test";
+>>>>>>> f2f99c8aa31942a590e2a12e1ca85265e1d80cab
 
     @Parameterized.Parameter
     public String fileName;
@@ -41,7 +45,11 @@ public class ModuloPrincipalSemanticTest {
 
     @Test
     public void test() throws IOException {
+<<<<<<< HEAD
         ModuloPrincipal p = new ModuloPrincipalSemanticBeautified(ABS_PATH + "\\" + fileName);
+=======
+        ModuloPrincipal p = new ModuloPrincipalSemantic(ABS_PATH + "\\" + fileName);
+>>>>>>> f2f99c8aa31942a590e2a12e1ca85265e1d80cab
         List<CompilerException> compilerExceptionList = p.getCompilerExceptionList();
         List<String[]> mustHaveExceptions = getMustHaveExceptions(ABS_PATH + "\\" + fileName);
 
