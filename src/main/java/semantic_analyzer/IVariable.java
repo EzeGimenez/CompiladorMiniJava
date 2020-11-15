@@ -12,4 +12,6 @@ public abstract class IVariable extends Entity {
     abstract IVisibility getVisibility();
 
     public abstract void validate(IType genericType) throws SemanticException;
+
+    public abstract IVariable cloneForOverwrite(IClassType parentClassRef);
 }

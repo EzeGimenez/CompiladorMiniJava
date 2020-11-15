@@ -29,6 +29,16 @@ public class Variable extends IVariable {
     }
 
     @Override
+    public IVariable cloneForOverwrite(IClassType parentClassRef) {
+        IClass parentClass = SymbolTable.getInstance().getClass(parentClassRef.getName());
+        IType outType = getType().cloneForOverwrite(getType().getLine(), getType().getRow(), getType().getColumn());
+        if (getType().equals(parentClass.getGenericType())) {
+            outType = parentClassRef.getGenericType();
+        }
+        return new Variable(getName(), getVisibility(), outType, getLine(), getRow(), getColumn());
+    }
+
+    @Override
     public void compareTo(Object o) throws SemanticException {
         if (o == null || getClass() != o.getClass()) throw new SemanticException(this, "diferentes");
         Variable variable = (Variable) o;

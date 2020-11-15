@@ -11,11 +11,11 @@ public abstract class IClass extends Entity {
         super(name, line, row, column);
     }
 
-    public abstract Map<String, IVariable> getInheritedAttributesMap();
+    public abstract Map<String, IVariable> getInheritedWithSameNameAttributes();
 
-    public abstract IClassType getParentClass();
+    public abstract IClassType getParentClassRef();
 
-    public abstract void setParentClass(IClassType iClass);
+    public abstract void setParentClassRef(IClassType iClass);
 
     public abstract Collection<IClassType> getInterfaceInheritanceList();
 

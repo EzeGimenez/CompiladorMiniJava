@@ -36,6 +36,14 @@ public class ClassType extends IClassType {
             throw new SemanticException(this, getName() + " no esta definido");
         }
 
+        if (genericType != null && referencedClass != null && referencedClass.getGenericType() == null) {
+            throw new SemanticException(this, "la clase no es generica");
+        }
+
+        if (genericType != null && referencedInterface != null && referencedInterface.getGenericType() == null) {
+            throw new SemanticException(this, "la clase no es generica");
+        }
+
         if (genericType == null) {
             if (referencedClass != null && referencedClass.getGenericType() != null) {
                 throw new SemanticException(this, "Falta el tipo parametrico de clase generica " + getName());
@@ -50,14 +58,40 @@ public class ClassType extends IClassType {
     }
 
     @Override
-    public void validateOverwrite(IClassType ancestorClassRef, IType ancestorType) throws SemanticException {
-        validate(ancestorClassRef.getGenericType());
+    public void validateOverwrite(IClassType ancestorRef, IType ancestorType) throws SemanticException {
+        validate(ancestorRef.getGenericType());
         if (ancestorType.getClass() != getClass()) {
             throw new SemanticException(this, "distinto tipo");
         }
-        if (!equalsToGenericType(ancestorClassRef.getGenericType())) {
-            throw new SemanticException(this, getName() + " no esta definido");
+
+        IType ancestorGenericType = getAncestorClassGenericType(ancestorRef);
+        if (Objects.equals(ancestorGenericType, ancestorType)) {
+            if (!equals(ancestorRef.getGenericType())) {
+                throw new SemanticException(this, "distinto tipo");
+            }
+        } else {
+            if (!equals(ancestorType)) {
+                throw new SemanticException(this, "distinto tipo");
+            }
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ClassType classType = (ClassType) o;
+        if (!Objects.equals(getName(), classType.getName())) return false;
+        return Objects.equals(genericType, classType.genericType);
+    }
+
+    private IType getAncestorClassGenericType(IClassType ancestorRef) {
+        IClass ancestorClass = SymbolTable.getInstance().getClass(ancestorRef.getName());
+        if (ancestorClass != null) {
+            return ancestorClass.getGenericType();
+        }
+        IInterface iInterface = SymbolTable.getInstance().getInterface(ancestorRef.getName());
+        return iInterface.getGenericType();
     }
 
     @Override

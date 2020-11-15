@@ -166,7 +166,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             Collection<IClassType> interfaceList = implementa();
 
             ST.getCurrClass().setGenericType(genericClass);
-            ST.getCurrClass().setParentClass(superClass);
+            ST.getCurrClass().setParentClassRef(superClass);
             for (IClassType i : interfaceList) {
                 if (!ST.getCurrClass().containsInterfaceInheritance(i.getName())) {
                     ST.getCurrClass().addInterfaceInheritance(i);

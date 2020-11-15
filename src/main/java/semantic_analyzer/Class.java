@@ -10,9 +10,9 @@ import java.util.Map;
 public class Class extends IClass {
 
     private final Collection<IClassType> interfaceInheritanceList;
-    private final Map<String, IVariable> attributeMap, inheritedAttributesMap;
+    private final Map<String, IVariable> attributeMap, inheritedWithSameNameAttributes;
     private final Map<String, IMethod> methodMap;
-    private IClassType parentClass;
+    private IClassType parentClassRef;
     private IMethod constructor;
     private IType genericType;
     private boolean didConsolidate;
@@ -24,25 +24,25 @@ public class Class extends IClass {
     public Class(String name, String line, int row, int column) {
         super(name, line, row, column);
         attributeMap = new HashMap<>();
-        inheritedAttributesMap = new HashMap<>();
+        inheritedWithSameNameAttributes = new HashMap<>();
         methodMap = new HashMap<>();
         interfaceInheritanceList = new ArrayList<>();
         didConsolidate = false;
     }
 
     @Override
-    public Map<String, IVariable> getInheritedAttributesMap() {
-        return inheritedAttributesMap;
+    public Map<String, IVariable> getInheritedWithSameNameAttributes() {
+        return inheritedWithSameNameAttributes;
     }
 
     @Override
-    public IClassType getParentClass() {
-        return parentClass;
+    public IClassType getParentClassRef() {
+        return parentClassRef;
     }
 
     @Override
-    public void setParentClass(IClassType iClass) {
-        parentClass = iClass;
+    public void setParentClassRef(IClassType iClass) {
+        parentClassRef = iClass;
     }
 
     @Override
@@ -120,11 +120,11 @@ public class Class extends IClass {
         if (getName().equals(name)) {
             return true;
         }
-        if (parentClass == null) {
+        if (parentClassRef == null) {
             return false;
         }
 
-        IClass parentClass = SymbolTable.getInstance().getClass(this.parentClass.getName());
+        IClass parentClass = SymbolTable.getInstance().getClass(this.parentClassRef.getName());
         if (parentClass != null) {
             return parentClass.hasAncestor(name);
         }
@@ -170,8 +170,8 @@ public class Class extends IClass {
     }
 
     private void consolidateAncestors() throws SemanticException {
-        if (parentClass != null) {
-            IClass parentClass = SymbolTable.getInstance().getClass(this.parentClass.getName());
+        if (parentClassRef != null) {
+            IClass parentClass = SymbolTable.getInstance().getClass(this.parentClassRef.getName());
             parentClass.consolidate();
         }
 
@@ -182,15 +182,15 @@ public class Class extends IClass {
     }
 
     private void validateClassInheritance() throws SemanticException {
-        if (parentClass != null) {
-            IClass classForParent = getClassForReference(parentClass);
+        if (parentClassRef != null) {
+            IClass classForParent = getClassForReference(parentClassRef);
             if (classForParent == null) {
-                if (getInterfaceForReference(parentClass) != null) {
-                    throw new SemanticException(parentClass, parentClass.getName() + " es una interfaz");
+                if (getInterfaceForReference(parentClassRef) != null) {
+                    throw new SemanticException(parentClassRef, parentClassRef.getName() + " es una interfaz");
                 }
-                throw new SemanticException(genericType, parentClass.getName() + " clase no definida");
+                throw new SemanticException(parentClassRef, parentClassRef.getName() + " clase no definida");
             }
-            parentClass.validate(genericType);
+            parentClassRef.validate(genericType);
             if (classForParent.hasAncestor(this.getName())) {
                 throw new SemanticException(this, "La clase sufre de herencia circular");
             }
@@ -221,8 +221,8 @@ public class Class extends IClass {
     }
 
     private void addInheritedMethodsFromParentClass() throws SemanticException {
-        if (parentClass != null) {
-            IClass iClass = getClassForReference(parentClass);
+        if (parentClassRef != null) {
+            IClass iClass = getClassForReference(parentClassRef);
             addMethodsFromClass(iClass);
         }
     }
@@ -233,7 +233,7 @@ public class Class extends IClass {
             if (!inheritedMethod.getName().equals("main")) {
                 methodWithSameName = methodMap.get(inheritedMethod.getName());
                 if (methodWithSameName != null) {
-                    methodWithSameName.validateOverwrite(parentClass, inheritedMethod);
+                    methodWithSameName.validateOverwrite(parentClassRef, inheritedMethod);
                 } else {
                     int columnFix = getColumn() + inheritedMethod.getName().length() + getName().length();
                     methodMap.put(
@@ -279,14 +279,15 @@ public class Class extends IClass {
     }
 
     private void addInheritedAttributesFromParentClass() {
-        if (parentClass != null) {
-            IClass parentClass = SymbolTable.getInstance().getClass(this.parentClass.getName());
+        if (parentClassRef != null) {
+            IClass parentClass = SymbolTable.getInstance().getClass(parentClassRef.getName());
             for (IVariable v : parentClass.getAttributeMap().values()) {
                 IVariable variableWithSameName = attributeMap.get(v.getName());
+                IVariable vClone = v.cloneForOverwrite(parentClassRef);
                 if (variableWithSameName != null) {
-                    inheritedAttributesMap.put(v.getName(), v);
+                    inheritedWithSameNameAttributes.put(v.getName(), vClone);
                 } else {
-                    attributeMap.put(v.getName(), v);
+                    attributeMap.put(v.getName(), vClone);
                 }
             }
         }

@@ -88,7 +88,7 @@ public class SymbolTable implements ISymbolTable {
         systemClass.addMethod(printSlnMethod);
 
         ClassType objectClassReference = new ClassType(objectClass.getName());
-        systemClass.setParentClass(objectClassReference);
+        systemClass.setParentClassRef(objectClassReference);
 
         addClass(objectClass);
         addClass(systemClass);
