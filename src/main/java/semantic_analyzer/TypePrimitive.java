@@ -4,13 +4,13 @@ import exceptions.SemanticException;
 
 import java.util.Objects;
 
-public abstract class PrimitiveType extends IType {
+public abstract class TypePrimitive extends IType {
 
-    public PrimitiveType(String name) {
+    public TypePrimitive(String name) {
         super(name, "", 0, 0);
     }
 
-    public PrimitiveType(String name, String line, int row, int column) {
+    public TypePrimitive(String name, String line, int row, int column) {
         super(name, line, row, column);
     }
 
@@ -22,7 +22,7 @@ public abstract class PrimitiveType extends IType {
     @Override
     public void compareTo(Object o) throws SemanticException {
         if (o == null || getClass() != o.getClass()) throw new SemanticException(this, "diferente tipo");
-        if (!Objects.equals(this.getName(), ((PrimitiveType) o).getName())) {
+        if (!Objects.equals(this.getName(), ((TypePrimitive) o).getName())) {
             throw new SemanticException(this, "nombres diferentes");
         }
     }

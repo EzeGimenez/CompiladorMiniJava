@@ -4,14 +4,14 @@ import exceptions.SemanticException;
 
 import java.util.Objects;
 
-public class ClassType extends IClassType {
+public class TypeClass extends IClassType {
     private IClassType genericType;
 
-    public ClassType(String name, String line, int row, int column) {
+    public TypeClass(String name, String line, int row, int column) {
         super(name, line, row, column);
     }
 
-    public ClassType(String name) {
+    public TypeClass(String name) {
         this(name, "", 0, 0);
     }
 
@@ -80,7 +80,7 @@ public class ClassType extends IClassType {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ClassType classType = (ClassType) o;
+        TypeClass classType = (TypeClass) o;
         if (!Objects.equals(getName(), classType.getName())) return false;
         return Objects.equals(genericType, classType.genericType);
     }
@@ -96,7 +96,7 @@ public class ClassType extends IClassType {
 
     @Override
     public IType cloneForOverwrite(String line, int row, int column) {
-        return new ClassType(getName(), line, row, column);
+        return new TypeClass(getName(), line, row, column);
     }
 
     private boolean equalsToGenericType(IType holderClassGenericType) {
@@ -109,7 +109,7 @@ public class ClassType extends IClassType {
         if (o == null || getClass() != o.getClass()) {
             throw new SemanticException(this, "tipos no iguales");
         }
-        ClassType classRef = (ClassType) o;
+        TypeClass classRef = (TypeClass) o;
         if (!Objects.equals(this.getName(), classRef.getName())) {
             throw new SemanticException(this, "nombre diferente");
         }

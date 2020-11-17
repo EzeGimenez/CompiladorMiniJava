@@ -1,13 +1,13 @@
 package semantic_analyzer;
 
-public class BooleanType extends PrimitiveType {
+public class TypeBoolean extends TypePrimitive {
     private static final String name = "boolean";
 
-    public BooleanType() {
+    public TypeBoolean() {
         super(name, "", 0, 0);
     }
 
-    public BooleanType(String line, int row, int column) {
+    public TypeBoolean(String line, int row, int column) {
         super(name, line, row, column);
     }
 
@@ -18,6 +18,6 @@ public class BooleanType extends PrimitiveType {
 
     @Override
     public IType cloneForOverwrite(String line, int row, int column) {
-        return new BooleanType(line, row, column);
+        return new TypeBoolean(line, row, column);
     }
 }

@@ -215,7 +215,7 @@ public class Class extends IClass {
 
     private void addConstructorIfMissing() {
         if (constructor == null) {
-            IClassType classType = new ClassType(getName());
+            IClassType classType = new TypeClass(getName());
             constructor = new Constructor(getName(), classType);
         }
     }

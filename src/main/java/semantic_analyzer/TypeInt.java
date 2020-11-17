@@ -1,13 +1,13 @@
 package semantic_analyzer;
 
-public class IntType extends PrimitiveType {
+public class TypeInt extends TypePrimitive {
     private static final String name = "int";
 
-    public IntType() {
+    public TypeInt() {
         super(name, "", 0, 0);
     }
 
-    public IntType(String line, int row, int column) {
+    public TypeInt(String line, int row, int column) {
         super(name, line, row, column);
     }
 
@@ -18,6 +18,6 @@ public class IntType extends PrimitiveType {
 
     @Override
     public IType cloneForOverwrite(String line, int row, int column) {
-        return new IntType(getLine(), row, column);
+        return new TypeInt(getLine(), row, column);
     }
 }

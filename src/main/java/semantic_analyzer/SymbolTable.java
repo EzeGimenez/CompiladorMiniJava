@@ -41,10 +41,10 @@ public class SymbolTable implements ISymbolTable {
         IClass systemClass = new Class("System");
 
         IAccessMode staticAccessMode = new AccessMode("static");
-        IType intType = new IntType();
-        IType booleanType = new BooleanType();
-        IType charType = new CharType();
-        IType stringType = new StringType();
+        IType intType = new TypeInt();
+        IType booleanType = new TypeBoolean();
+        IType charType = new TypeChar();
+        IType stringType = new TypeString();
         IType voidType = new VoidType();
 
         IMethod readMethod = new Method(staticAccessMode, intType, "read");
@@ -87,7 +87,7 @@ public class SymbolTable implements ISymbolTable {
         systemClass.addMethod(printIlnMethod);
         systemClass.addMethod(printSlnMethod);
 
-        ClassType objectClassReference = new ClassType(objectClass.getName());
+        TypeClass objectClassReference = new TypeClass(objectClass.getName());
         systemClass.setParentClassRef(objectClassReference);
 
         addClass(objectClass);

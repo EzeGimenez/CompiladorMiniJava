@@ -1,14 +1,14 @@
 package semantic_analyzer;
 
-public class CharType extends PrimitiveType {
+public class TypeChar extends TypePrimitive {
 
     private static final String name = "char";
 
-    public CharType() {
+    public TypeChar() {
         this("", 0, 0);
     }
 
-    public CharType(String line, int row, int column) {
+    public TypeChar(String line, int row, int column) {
         super(name, line, row, column);
     }
 
@@ -19,6 +19,6 @@ public class CharType extends PrimitiveType {
 
     @Override
     public IType cloneForOverwrite(String line, int row, int column) {
-        return new CharType(line, row, column);
+        return new TypeChar(line, row, column);
     }
 }

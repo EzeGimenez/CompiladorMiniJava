@@ -95,9 +95,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     }
 
     private int getColumn(String message) {
-        switch (currToken.getDescriptor()) {
-            case EOF:
-                return fileHandler.getColumn() + message.length();
+        if (currToken.getDescriptor() == EOF) {
+            return fileHandler.getColumn() + message.length();
         }
         return fileHandler.getColumn();
     }
@@ -226,7 +225,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(LESS_THAN)) {
             match(LESS_THAN);
             String className = currToken.getLexeme();
-            outClassRef = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            outClassRef = new TypeClass(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
             IClassType genericClass = genericidad();
             match(GREATER_THAN);
@@ -254,7 +253,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         IClassType outClassRef = null;
         if (equalsAny(ID_CLASS)) {
             String className = currToken.getLexeme();
-            outClassRef = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            outClassRef = new TypeClass(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
             IClassType genericClass = genericidad();
             outClassRef.setGenericType(genericClass);
@@ -268,7 +267,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(EXTENDS)) {
             match(EXTENDS);
             String className = currToken.getLexeme();
-            IClassType classReference = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IClassType classReference = new TypeClass(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
             IClassType genericClass = genericidad();
             classReference.setGenericType(genericClass);
@@ -277,7 +276,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else if (!equalsAny(IMPLEMENTS, BRACES_OPEN)) {
             throw buildSyntaxException("extends, implements o {");
         }
-        return new ClassType("Object", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        return new TypeClass("Object", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
     }
 
     private Collection<IClassType> implementa() throws SyntaxException {
@@ -293,7 +292,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private Collection<IClassType> listaInterfaces() throws SyntaxException {
         String className = currToken.getLexeme();
-        IClassType inheritanceEntity = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        IClassType inheritanceEntity = new TypeClass(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         match(ID_CLASS);
         IClassType genericClass = genericidad();
         inheritanceEntity.setGenericType(genericClass);
@@ -400,7 +399,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private void attrOCons() throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(ID_CLASS)) {
             String className = currToken.getLexeme();
-            IClassType classReference = new ClassType(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IClassType classReference = new TypeClass(className, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
             attrOConsAUX(classReference);
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
@@ -535,7 +534,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             outType = tipoPrimitivo();
         } else if (equalsAny(ID_CLASS)) {
             String typeClassName = currToken.getLexeme();
-            IClassType classType = new ClassType(typeClassName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IClassType classType = new TypeClass(typeClassName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
 
             IClassType genericClass = genericidad();
@@ -549,21 +548,21 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     }
 
     private IType tipoPrimitivo() throws SyntaxException {
-        PrimitiveType primitiveType;
+        TypePrimitive primitiveType;
         if (equalsAny(PR_BOOLEAN)) {
-            primitiveType = new BooleanType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            primitiveType = new TypeBoolean(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PR_BOOLEAN);
 
         } else if (equalsAny(PR_CHAR)) {
-            primitiveType = new CharType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            primitiveType = new TypeChar(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PR_CHAR);
 
         } else if (equalsAny(PR_INT)) {
-            primitiveType = new IntType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            primitiveType = new TypeInt(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PR_INT);
 
         } else if (equalsAny(PR_STRING)) {
-            primitiveType = new StringType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            primitiveType = new TypeString(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(PR_STRING);
 
         } else {
@@ -692,7 +691,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(SEMICOLON);
         } else if (equalsAny(ID_CLASS)) {
             String classTypeName = currToken.getLexeme();
-            IClassType classType = new ClassType(classTypeName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            IClassType classType = new TypeClass(classTypeName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(ID_CLASS);
 
             IClassType genericClass = genericidad();
