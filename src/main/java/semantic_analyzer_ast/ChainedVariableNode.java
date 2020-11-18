@@ -2,17 +2,11 @@ package semantic_analyzer_ast;
 
 import lexical_analyzer.IToken;
 
-public class AccessStaticNode extends AccessNode {
-
+public class ChainedVariableNode extends ChainedNode {
     private ChainedNode chainedNode;
 
-    public AccessStaticNode(IToken token, String line, int row, int column) {
+    public ChainedVariableNode(IToken token, String line, int row, int column) {
         super(token, line, row, column);
-    }
-
-    @Override
-    public void validate() {
-
     }
 
     public ChainedNode getChainedNode() {
@@ -23,4 +17,8 @@ public class AccessStaticNode extends AccessNode {
         this.chainedNode = chainedNode;
     }
 
+    @Override
+    public void validate() {
+
+    }
 }

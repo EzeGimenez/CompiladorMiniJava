@@ -7,14 +7,19 @@ import java.util.List;
 
 public class CodeBlockNode extends Node {
 
-    private final List<Node> sentences;
+    private final List<SentenceNode> sentences;
 
     public CodeBlockNode(IToken token, String line, int row, int column) {
         super(token, line, row, column);
         sentences = new ArrayList<>();
     }
 
-    public List<Node> getSentences() {
+    @Override
+    public void validate() {
+
+    }
+
+    public List<SentenceNode> getSentences() {
         return sentences;
     }
 }

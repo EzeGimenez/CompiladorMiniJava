@@ -2,36 +2,33 @@ package semantic_analyzer_ast;
 
 import lexical_analyzer.IToken;
 
-public class ExpressionBinaryNode extends Node {
+public class ExpressionBinaryNode extends ExpressionNode {
 
-    private Node leftSide, rightSide;
-    private IToken token;
+    private ExpressionNode leftSide, rightSide;
 
     public ExpressionBinaryNode(IToken token, String line, int row, int column) {
         super(token, line, row, column);
     }
 
-    public Node getLeftSide() {
+    public ExpressionNode getLeftSide() {
         return leftSide;
     }
 
-    public void setLeftSide(Node leftSide) {
+    public void setLeftSide(ExpressionNode leftSide) {
         this.leftSide = leftSide;
     }
 
-    public Node getRightSide() {
+    public ExpressionNode getRightSide() {
         return rightSide;
     }
 
-    public void setRightSide(Node rightSide) {
+    public void setRightSide(ExpressionNode rightSide) {
         this.rightSide = rightSide;
     }
 
-    public IToken getToken() {
-        return token;
+    @Override
+    public void validate() {
+
     }
 
-    public void setToken(IToken token) {
-        this.token = token;
-    }
 }
