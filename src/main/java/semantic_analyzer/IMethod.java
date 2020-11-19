@@ -1,13 +1,25 @@
 package semantic_analyzer;
 
 import exceptions.SemanticException;
+import semantic_analyzer_ast.CodeBlockNode;
 
 import java.util.List;
 
 public abstract class IMethod extends Entity {
 
+    private CodeBlockNode abstractSyntaxTree;
+
+
     public IMethod(String name, String line, int row, int column) {
         super(name, line, row, column);
+    }
+
+    public CodeBlockNode getAbstractSyntaxTree() {
+        return abstractSyntaxTree;
+    }
+
+    public void setAbstractSyntaxTree(CodeBlockNode abstractSyntaxTree) {
+        this.abstractSyntaxTree = abstractSyntaxTree;
     }
 
     public abstract List<IParameter> getParameterList();
