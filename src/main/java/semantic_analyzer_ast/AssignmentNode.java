@@ -1,14 +1,12 @@
 package semantic_analyzer_ast;
 
-import lexical_analyzer.IToken;
-
 public class AssignmentNode extends SentenceNode {
 
-    private VariableNode leftSide;
+    private ExpressionNode leftSide;
     private ExpressionNode rightSide;
 
-    public AssignmentNode(IToken token, String line, int row, int column) {
-        super(token, line, row, column);
+    public AssignmentNode(String line, int row, int column) {
+        super(line, row, column);
     }
 
     @Override
@@ -16,11 +14,11 @@ public class AssignmentNode extends SentenceNode {
 
     }
 
-    public VariableNode getLeftSide() {
+    public ExpressionNode getLeftSide() {
         return leftSide;
     }
 
-    public void setLeftSide(VariableNode leftSide) {
+    public void setLeftSide(ExpressionNode leftSide) {
         this.leftSide = leftSide;
     }
 

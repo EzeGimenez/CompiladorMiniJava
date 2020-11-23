@@ -1,19 +1,17 @@
 package semantic_analyzer_ast;
 
-import lexical_analyzer.IToken;
-
 public class ExpressionUnaryNode extends ExpressionNode {
-    private OperandNode operandNode;
+    private ExpressionNode operandNode;
 
-    public ExpressionUnaryNode(IToken token, String line, int row, int column) {
-        super(token, line, row, column);
+    public ExpressionUnaryNode(String line, int row, int column) {
+        super(line, row, column);
     }
 
-    public OperandNode getOperandNode() {
+    public ExpressionNode getOperandNode() {
         return operandNode;
     }
 
-    public void setOperandNode(OperandNode operandNode) {
+    public void setOperandNode(ExpressionNode operandNode) {
         this.operandNode = operandNode;
     }
 

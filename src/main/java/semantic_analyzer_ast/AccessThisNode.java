@@ -1,8 +1,7 @@
 package semantic_analyzer_ast;
 
-public class ChainedVariableNode extends ChainedNode {
-
-    public ChainedVariableNode(String line, int row, int column) {
+public class AccessThisNode extends AccessNode {
+    public AccessThisNode(String line, int row, int column) {
         super(line, row, column);
     }
 

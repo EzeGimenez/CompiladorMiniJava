@@ -1,26 +1,26 @@
 package semantic_analyzer_ast;
 
-import lexical_analyzer.IToken;
+import semantic_analyzer.IType;
 
 public class AccessStaticNode extends AccessNode {
 
-    private ChainedNode chainedNode;
+    private IType classType;
 
-    public AccessStaticNode(IToken token, String line, int row, int column) {
-        super(token, line, row, column);
+    public AccessStaticNode(String line, int row, int column) {
+        super(line, row, column);
+    }
+
+    public IType getClassType() {
+        return classType;
+    }
+
+    public void setClassType(IType classType) {
+        this.classType = classType;
     }
 
     @Override
     public void validate() {
 
-    }
-
-    public ChainedNode getChainedNode() {
-        return chainedNode;
-    }
-
-    public void setChainedNode(ChainedNode chainedNode) {
-        this.chainedNode = chainedNode;
     }
 
 }

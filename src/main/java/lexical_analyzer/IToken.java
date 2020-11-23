@@ -24,6 +24,6 @@ public interface IToken {
      *
      * @return entero con el numero de linea indice 1
      */
-    int getLineNumber();
+    int getRowNumber();
 
 }

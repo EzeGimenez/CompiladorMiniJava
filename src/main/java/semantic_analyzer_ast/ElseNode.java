@@ -1,8 +1,6 @@
 package semantic_analyzer_ast;
 
-import lexical_analyzer.IToken;
-
-public class ElseNode extends Node {
+public class ElseNode extends SentenceNode {
 
     private ExpressionNode condition;
     private SentenceNode sentenceNode;
@@ -12,12 +10,12 @@ public class ElseNode extends Node {
         return sentenceNode;
     }
 
-    public void setSentenceNode(SentenceNode sentenceNode) {
-        this.sentenceNode = sentenceNode;
+    public ElseNode(String line, int row, int column) {
+        super(line, row, column);
     }
 
-    public ElseNode(IToken token, String line, int row, int column) {
-        super(token, line, row, column);
+    public void setBody(SentenceNode sentenceNode) {
+        this.sentenceNode = sentenceNode;
     }
 
     public ExpressionNode getCondition() {

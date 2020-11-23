@@ -1,16 +1,14 @@
 package semantic_analyzer_ast;
 
-import lexical_analyzer.IToken;
-
 import java.util.ArrayList;
 import java.util.List;
 
-public class CodeBlockNode extends Node {
+public class CodeBlockNode extends SentenceNode {
 
     private final List<SentenceNode> sentences;
 
-    public CodeBlockNode(IToken token, String line, int row, int column) {
-        super(token, line, row, column);
+    public CodeBlockNode(String line, int row, int column) {
+        super(line, row, column);
         sentences = new ArrayList<>();
     }
 

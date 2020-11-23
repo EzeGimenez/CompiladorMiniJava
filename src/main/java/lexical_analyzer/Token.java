@@ -23,7 +23,7 @@ public class Token implements IToken {
     }
 
     @Override
-    public int getLineNumber() {
+    public int getRowNumber() {
         return lineNumber;
     }
 

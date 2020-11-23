@@ -1,14 +1,12 @@
 package semantic_analyzer_ast;
 
-import lexical_analyzer.IToken;
-
-public class IfNode extends Node {
+public class IfNode extends SentenceNode {
     private ExpressionNode condition;
     private SentenceNode sentenceNode;
     private ElseNode elseNode;
 
-    public IfNode(IToken token, String line, int row, int column) {
-        super(token, line, row, column);
+    public IfNode(String line, int row, int column) {
+        super(line, row, column);
     }
 
     public ExpressionNode getCondition() {
@@ -31,7 +29,7 @@ public class IfNode extends Node {
         return sentenceNode;
     }
 
-    public void setSentenceNode(SentenceNode sentenceNode) {
+    public void setBody(SentenceNode sentenceNode) {
         this.sentenceNode = sentenceNode;
     }
 
