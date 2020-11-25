@@ -1,6 +1,7 @@
 package semantic_analyzer;
 
 import exceptions.SemanticException;
+import semantic_analyzer_ast.sentence_nodes.CodeBlockNode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,9 +14,11 @@ public class SymbolTable implements ISymbolTable {
     private final Map<String, IClass> classMap;
     private final Map<String, IInterface> interfaceMap;
     private final List<SemanticException> semanticExceptionList;
+
     private IClass currClass;
     private IInterface currInterface;
     private IMethod currMethod;
+    private CodeBlockNode currAST;
 
     private SymbolTable() {
         interfaceMap = new HashMap<>();
@@ -36,6 +39,15 @@ public class SymbolTable implements ISymbolTable {
         instance = null;
     }
 
+    public CodeBlockNode getCurrAST() {
+        return currAST;
+    }
+
+    @Override
+    public void setCurrAST(CodeBlockNode codeBlockNode) {
+        currAST = codeBlockNode;
+    }
+
     private void createDefaultClasses() {
         IClass objectClass = new Class("Object");
         IClass systemClass = new Class("System");
@@ -45,7 +57,7 @@ public class SymbolTable implements ISymbolTable {
         IType booleanType = new TypeBoolean();
         IType charType = new TypeChar();
         IType stringType = new TypeString();
-        IType voidType = new VoidType();
+        IType voidType = new TypeVoid();
 
         IMethod readMethod = new Method(staticAccessMode, intType, "read");
         IMethod printBMethod = new Method(staticAccessMode, voidType, "printB");
@@ -165,17 +177,17 @@ public class SymbolTable implements ISymbolTable {
     }
 
     @Override
-    public void consolidate() {
+    public void declarationCheck() {
         for (IInterface i : interfaceMap.values()) {
             try {
-                i.consolidate();
+                i.declarationCheck();
             } catch (SemanticException e) {
                 saveException(e);
             }
         }
         for (IClass c : classMap.values()) {
             try {
-                c.consolidate();
+                c.declarationCheck();
             } catch (SemanticException e) {
                 saveException(e);
             }
@@ -183,6 +195,18 @@ public class SymbolTable implements ISymbolTable {
         if (!existOneMainMethod()) {
             IClass c = new Class("");
             saveException(new SemanticException(c, "debe incluirse un metodo estatico main sin tipo de retorno ni parametros"));
+        }
+    }
+
+    @Override
+    public void sentencesCheck() {
+        for (IClass c : classMap.values()) {
+            try {
+                currClass = c;
+                c.sentencesCheck();
+            } catch (SemanticException e) {
+                saveException(e);
+            }
         }
     }
 

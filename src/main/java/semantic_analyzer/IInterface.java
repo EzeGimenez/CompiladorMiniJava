@@ -27,5 +27,5 @@ public abstract class IInterface extends Entity {
 
     protected abstract boolean hasAncestor(String name);
 
-    public abstract void consolidate() throws SemanticException;
+    public abstract void declarationCheck() throws SemanticException;
 }

@@ -45,5 +45,7 @@ public abstract class IClass extends Entity {
 
     protected abstract boolean hasAncestor(String name) throws SemanticException;
 
-    public abstract void consolidate() throws SemanticException;
+    public abstract void declarationCheck() throws SemanticException;
+
+    public abstract void sentencesCheck() throws SemanticException;
 }

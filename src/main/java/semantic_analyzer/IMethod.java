@@ -1,14 +1,13 @@
 package semantic_analyzer;
 
 import exceptions.SemanticException;
-import semantic_analyzer_ast.CodeBlockNode;
+import semantic_analyzer_ast.sentence_nodes.CodeBlockNode;
 
 import java.util.List;
 
 public abstract class IMethod extends Entity {
 
     private CodeBlockNode abstractSyntaxTree;
-
 
     public IMethod(String name, String line, int row, int column) {
         super(name, line, row, column);
@@ -36,6 +35,8 @@ public abstract class IMethod extends Entity {
     }
 
     public abstract boolean containsParameter(String parameterName);
+
+    public abstract IParameter getParameter(String parameterName);
 
     public void validate(IType genericType) throws SemanticException {
         if (getReturnType() != null) getReturnType().validate(genericType);
@@ -73,4 +74,8 @@ public abstract class IMethod extends Entity {
     }
 
     public abstract IMethod cloneForOverwrite(String line, int row, int column);
+
+    public void sentencesCheck() throws SemanticException {
+        abstractSyntaxTree.validate();
+    }
 }

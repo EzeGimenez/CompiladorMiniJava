@@ -6,11 +6,18 @@ public class Variable extends IVariable {
 
     private final IType type;
     private final IVisibility visibility;
+    private final IAccessMode accessMode;
 
-    public Variable(String name, IVisibility visibility, IType type, String line, int row, int column) {
+    public Variable(String name, IAccessMode accessMode, IVisibility visibility, IType type, String line, int row, int column) {
         super(name, line, row, column);
         this.type = type;
+        this.accessMode = accessMode;
         this.visibility = visibility;
+    }
+
+    @Override
+    public IAccessMode getAccessMode() {
+        return accessMode;
     }
 
     @Override
@@ -35,7 +42,7 @@ public class Variable extends IVariable {
         if (getType().equals(parentClass.getGenericType())) {
             outType = parentClassRef.getGenericType();
         }
-        return new Variable(getName(), getVisibility(), outType, getLine(), getRow(), getColumn());
+        return new Variable(getName(), accessMode, getVisibility(), outType, getLine(), getRow(), getColumn());
     }
 
     @Override

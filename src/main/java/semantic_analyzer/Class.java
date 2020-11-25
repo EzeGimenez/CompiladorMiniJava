@@ -138,21 +138,43 @@ public class Class extends IClass {
     }
 
     @Override
-    public void consolidate() throws SemanticException {
+    public void declarationCheck() throws SemanticException {
         if (!didConsolidate) {
             didConsolidate = true;
             genericTypeCheck();
+
             validateClassInheritance();
-            validateInterfaceInheritance();
-            consolidateAncestors();
+            validateInterfaceImplementation();
+
+            ancestorsCheck();
+
             addConstructorIfMissing();
 
             addInheritedMethodsFromParentClass();
             addInheritedMethodsFromInterfaces();
 
             addInheritedAttributesFromParentClass();
+
             validateMethods();
             validateAttributes();
+        }
+    }
+
+    @Override
+    public void sentencesCheck() {
+        try {
+            SymbolTable.getInstance().setCurrMethod(constructor);
+            constructor.sentencesCheck();
+        } catch (SemanticException e) {
+            SymbolTable.getInstance().saveException(e);
+        }
+        for (IMethod m : methodMap.values()) {
+            try {
+                SymbolTable.getInstance().setCurrMethod(m);
+                m.sentencesCheck();
+            } catch (SemanticException e) {
+                SymbolTable.getInstance().saveException(e);
+            }
         }
     }
 
@@ -169,15 +191,15 @@ public class Class extends IClass {
         }
     }
 
-    private void consolidateAncestors() throws SemanticException {
+    private void ancestorsCheck() throws SemanticException {
         if (parentClassRef != null) {
             IClass parentClass = SymbolTable.getInstance().getClass(this.parentClassRef.getName());
-            parentClass.consolidate();
+            parentClass.declarationCheck();
         }
 
         for (IClassType c : interfaceInheritanceList) {
             IInterface iInterface = getInterfaceForReference(c);
-            iInterface.consolidate();
+            iInterface.declarationCheck();
         }
     }
 
@@ -197,7 +219,7 @@ public class Class extends IClass {
         }
     }
 
-    private void validateInterfaceInheritance() throws SemanticException {
+    private void validateInterfaceImplementation() throws SemanticException {
         for (IClassType interfaceRef : interfaceInheritanceList) {
             IInterface parentInterface = getInterfaceForReference(interfaceRef);
             if (parentInterface == null) {

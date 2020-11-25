@@ -7,10 +7,12 @@ import exceptions.SyntaxException;
 import lexical_analyzer.*;
 import semantic_analyzer.Class;
 import semantic_analyzer.*;
-import semantic_analyzer_ast.*;
+import semantic_analyzer_ast.expression_nodes.*;
+import semantic_analyzer_ast.sentence_nodes.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import static lexical_analyzer.TokenDescriptor.*;
@@ -462,15 +464,18 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }
     }
 
-    private List<AssignmentNode> asignacionAttr(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
+    private List<SentenceNode> asignacionAttr(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
         String attributeName = currToken.getLexeme();
-        IVariable attribute = new Variable(attributeName, visibility, type, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        IVariable attribute = new Variable(attributeName, accessMode, visibility, type, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
 
-        AccessStaticNode accessNode = new AccessStaticNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-        accessNode.setToken(currToken);
-        accessNode.setClassType(type);
+        DeclarationNode declarationNode = new DeclarationNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        declarationNode.setType(type);
+        declarationNode.setToken(currToken);
+
+        IToken idToken = currToken;
         match(ID_MET_VAR);
-        List<AssignmentNode> out = asignacionAttrAux(accessNode, visibility, accessMode, type);
+        List<SentenceNode> out = asignacionAttrAux(idToken, visibility, accessMode, type);
+        out.add(0, declarationNode);
 
         if (!ST.getCurrClass().containsAttribute(attributeName)) {
             ST.getCurrClass().addAttribute(attribute);
@@ -480,21 +485,25 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         return out;
     }
 
-    private List<AssignmentNode> asignacionAttrAux(AccessNode accessNode, IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
-        List<AssignmentNode> out = new ArrayList<>();
+    private List<SentenceNode> asignacionAttrAux(IToken idToken, IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
+        List<SentenceNode> out = new ArrayList<>();
+
         if (equalsAny(ASSIGN)) {
+            AccessVariableNode accessNode = new AccessVariableNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            accessNode.setToken(idToken);
             AssignmentNode assignmentNode = new AssignmentNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            assignmentNode.setLeftSide(accessNode);
             assignmentNode.setToken(currToken);
             match(ASSIGN);
-            assignmentNode.setLeftSide(accessNode);
             assignmentNode.setRightSide(expresion());
             out.add(assignmentNode);
         }
+
         out.addAll(listaAsignacion(visibility, accessMode, type));
         return out;
     }
 
-    private List<AssignmentNode> listaAsignacion(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
+    private List<SentenceNode> listaAsignacion(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(COMMA)) {
             match(COMMA);
             return asignacionAttr(visibility, accessMode, type);
@@ -602,7 +611,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ID_CLASS, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             outType = tipo();
         } else if (equalsAny(VOID)) {
-            outType = new VoidType(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            outType = new TypeVoid(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             match(VOID);
         } else {
             throw buildSyntaxException("el tipo de retorno");
@@ -682,48 +691,51 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(SEMICOLON, STATIC, IF, WHILE, RETURN, ID_CLASS, BRACES_OPEN, PARENTHESES_OPEN, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING, THIS, NEW, ID_MET_VAR)) {
 
             try {
-                SentenceNode sentenceNode = sentencia();
-                sentenceNodeList.add(sentenceNode);
+                sentenceNodeList.addAll(sentencia());
             } catch (CompilerException e) {
                 saveException(e);
                 updateTokenUntilSentinel(SEMICOLON, BRACES_OPEN, BRACES_CLOSE);
             }
 
-            listaSentencias();
+            sentenceNodeList.addAll(listaSentencias());
         } else if (!equalsAny(BRACES_CLOSE)) {
             throw buildSyntaxException("una sentencia o }");
         }
         return sentenceNodeList;
     }
 
-    private SentenceNode sentencia() throws LexicalException, SyntaxException, SemanticException {
-        SentenceNode out = null;
+    private List<SentenceNode> sentencia() throws LexicalException, SyntaxException, SemanticException {
+        List<SentenceNode> out = new ArrayList<>();
         if (equalsAny(SEMICOLON)) {
-            out = new EmptySentenceNode(currToken, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            SentenceNode emptySentenceNode = new EmptySentenceNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            emptySentenceNode.setToken(currToken);
+            out.add(emptySentenceNode);
+
             match(SEMICOLON);
         } else if (equalsAny(PARENTHESES_OPEN, THIS, NEW, ID_MET_VAR)) {
             ExpressionNode accessNode = acceso();
-            out = sentenciaAUX(accessNode);
+            out.add(sentenciaAUX(accessNode));
             match(SEMICOLON);
         } else if (equalsAny(STATIC)) {
             match(STATIC);
-            AccessNode staticAccessNode = new AccessStaticNode(fileHandler.getCurrentLine(), fileHandler.getRow(), formaMetodo().getColumn());
+            AccessStaticNode staticAccessNode = new AccessStaticNode(fileHandler.getCurrentLine(), fileHandler.getRow(), formaMetodo().getColumn());
+            String classTypeName = currToken.getLexeme();
+            IClassType classType = new TypeClass(classTypeName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            staticAccessNode.setClassType(classType);
             match(ID_CLASS);
 
             // TODO
             genericidad();
             // GenericityNode genericityNode = new GenericityNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
 
-            out = preAccesoEstatico(staticAccessNode);
+            out.add(preAccesoEstatico(staticAccessNode));
 
             match(SEMICOLON);
         } else if (equalsAny(PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING)) {
             IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
 
             IType type = tipoPrimitivo();
-            List<AssignmentNode> sentenceNodeList = asignacionAttr(null, defaultAccessMode, type);
-            DeclarationNode declarationNode = new DeclarationNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-            declarationNode.setDeclarationAssignments(sentenceNodeList);
+            out.addAll(asignacionAttr(null, defaultAccessMode, type));
 
             match(SEMICOLON);
         } else if (equalsAny(ID_CLASS)) {
@@ -735,7 +747,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             IClassType genericClass = genericidad();
             classType.setGenericType(genericClass);
 
-            out = accesoEstaticoODeclaracion(classType);
+            out.addAll(accesoEstaticoODeclaracion(classType));
             match(SEMICOLON);
         } else if (equalsAny(IF)) {
             match(IF);
@@ -743,9 +755,13 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             IfNode ifNode = new IfNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             ifNode.setCondition(expresion());
             match(PARENTHESES_CLOSE);
-            ifNode.setBody(sentencia());
+
+            CodeBlockNode body = new CodeBlockNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            body.getSentences().addAll(sentencia());
+            ifNode.setBody(body);
+
             ifNode.setElseNode(sentenciaAUX1());
-            out = ifNode;
+            out.add(ifNode);
         } else if (equalsAny(WHILE)) {
             match(WHILE);
             match(PARENTHESES_OPEN);
@@ -753,16 +769,18 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             WhileNode whileNode = new WhileNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             whileNode.setCondition(expresion());
             match(PARENTHESES_CLOSE);
-            whileNode.setBody(sentencia());
+            CodeBlockNode body = new CodeBlockNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            body.getSentences().addAll(sentencia());
+            whileNode.setBody(body);
 
-            out = whileNode;
+            out.add(whileNode);
         } else if (equalsAny(BRACES_OPEN)) {
-            out = bloque();
+            out.add(bloque());
         } else if (equalsAny(RETURN)) {
             match(RETURN);
             ReturnNode returnNode = new ReturnNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             returnNode.setExpressionNode(expresionOVacio());
-            out = returnNode;
+            out.add(returnNode);
 
             match(SEMICOLON);
         } else {
@@ -778,8 +796,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             throw buildSyntaxException(";");
         }
 
-        DeclarationNode out = new DeclarationNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-        out.setAccessNode(accessNode);
+        AccessSentenceNode out = new AccessSentenceNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        out.setExpressionNode(accessNode);
         return out;
     }
 
@@ -788,7 +806,9 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             ElseNode elseNode = new ElseNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             elseNode.setToken(currToken);
             match(ELSE);
-            elseNode.setBody(sentencia());
+            CodeBlockNode body = new CodeBlockNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            body.getSentences().addAll(sentencia());
+            elseNode.setBody(body);
             return elseNode;
         } else if (!equalsAny(SEMICOLON, IF, WHILE, RETURN, BRACES_OPEN, PARENTHESES_OPEN, PR_BOOLEAN, PR_CHAR, PR_INT, PR_STRING, THIS, NEW, ID_MET_VAR, ELSE, BRACES_CLOSE)) {
             throw buildSyntaxException("; if while return idclase { ( boolean char int string this static new idmetvar else }");
@@ -796,37 +816,35 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         return null;
     }
 
-    private SentenceNode accesoEstaticoODeclaracion(IType classType) throws SyntaxException, LexicalException, SemanticException {
+    private List<SentenceNode> accesoEstaticoODeclaracion(IType classType) throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(ID_MET_VAR)) {
             IAccessMode defaultAccessMode = new AccessMode("static", fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-            List<AssignmentNode> assignmentNodeList = asignacionAttr(null, defaultAccessMode, classType);
-            DeclarationNode out = new DeclarationNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-            out.setDeclarationAssignments(assignmentNodeList);
-
+            DeclarationNode declarationNode = new DeclarationNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            declarationNode.setType(classType);
+            declarationNode.setToken(currToken);
+            List<SentenceNode> out = asignacionAttr(null, defaultAccessMode, classType);
+            out.add(0, declarationNode);
+            return out;
         } else if (equalsAny(DOT)) {
             AccessStaticNode accessStaticNode = new AccessStaticNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             accessStaticNode.setClassType(classType);
-            return preAccesoEstatico(accessStaticNode);
+            return Collections.singletonList(preAccesoEstatico(accessStaticNode));
         }
         throw buildSyntaxException("idMetVar o .");
     }
 
     private AssignmentNode asignacion(ExpressionNode accessNode) throws LexicalException, SyntaxException {
-        AssignmentNode assignmentNode = new AssignmentNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-
-        IToken assignmentType = tipoDeAsignacion();
-        assignmentNode.setToken(assignmentType);
-
-        ExpressionNode rightSide = expresion();
+        AssignmentNode assignmentNode = tipoDeAsignacion();
 
         assignmentNode.setLeftSide(accessNode);
-        assignmentNode.setRightSide(rightSide);
+        assignmentNode.setRightSide(expresion());
 
         return assignmentNode;
     }
 
-    private IToken tipoDeAsignacion() throws SyntaxException {
-        IToken out = currToken;
+    private AssignmentNode tipoDeAsignacion() throws SyntaxException {
+        AssignmentNode out = new AssignmentNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        out.setToken(currToken);
         if (equalsAny(ASSIGN)) {
             match(ASSIGN);
         } else if (equalsAny(ASSIGN_SUB)) {
@@ -865,9 +883,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private ExpressionBinaryNode orAux() throws SyntaxException, LexicalException {
         if (equalsAny(OP_OR)) {
-            ExpressionBinaryNode expressionBinaryNode = new ExpressionBinaryNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-            expressionBinaryNode.setToken(currToken);
-            op1();
+            ExpressionBinaryNode expressionBinaryNode = op1();
             expressionBinaryNode.setRightSide(and());
             ExpressionBinaryNode expressionNode = orAux();
             if (expressionNode != null) {
@@ -894,9 +910,8 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private ExpressionBinaryNode andAux() throws SyntaxException, LexicalException {
         if (equalsAny(OP_AND)) {
-            ExpressionBinaryNode expressionBinaryNode = new ExpressionBinaryNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            ExpressionBinaryNode expressionBinaryNode = op2();
             expressionBinaryNode.setToken(currToken);
-            op2();
 
             expressionBinaryNode.setRightSide(equalsExp());
             ExpressionBinaryNode expressionNode = andAux();
@@ -924,9 +939,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private ExpressionBinaryNode equalsAux() throws SyntaxException, LexicalException {
         if (equalsAny(EQUALS, NOT_EQUALS)) {
-            ExpressionBinaryNode expressionBinaryNode = new ExpressionBinaryNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-            expressionBinaryNode.setToken(currToken);
-            op3();
+            ExpressionBinaryNode expressionBinaryNode = op3();
 
             expressionBinaryNode.setRightSide(inEq());
             ExpressionBinaryNode expressionNode = equalsAux();
@@ -954,9 +967,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private ExpressionBinaryNode inEqAux() throws SyntaxException, LexicalException {
         if (equalsAny(LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS)) {
-            ExpressionBinaryNode expressionBinaryNode = new ExpressionBinaryNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-            expressionBinaryNode.setToken(currToken);
-            op4();
+            ExpressionBinaryNode expressionBinaryNode = op4();
 
             expressionBinaryNode.setRightSide(add());
             ExpressionBinaryNode expressionNode = inEqAux();
@@ -984,9 +995,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private ExpressionBinaryNode addAux() throws SyntaxException, LexicalException {
         if (equalsAny(ADD, SUB)) {
-            ExpressionBinaryNode expressionBinaryNode = new ExpressionBinaryNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-            expressionBinaryNode.setToken(currToken);
-            op5();
+            ExpressionBinaryNode expressionBinaryNode = op5();
 
             expressionBinaryNode.setRightSide(mult());
             ExpressionBinaryNode expressionNode = addAux();
@@ -1014,9 +1023,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
 
     private ExpressionBinaryNode multAux() throws SyntaxException, LexicalException {
         if (equalsAny(MULTIPLY, DIVIDE, REMAINDER)) {
-            ExpressionBinaryNode expressionBinaryNode = new ExpressionBinaryNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-            expressionBinaryNode.setToken(currToken);
-            op6();
+            ExpressionBinaryNode expressionBinaryNode = op6();
 
             expressionBinaryNode.setRightSide(expresionUnaria());
             ExpressionBinaryNode expressionNode = multAux();
@@ -1031,15 +1038,23 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         return null;
     }
 
-    private void op1() throws SyntaxException {
+    private ExpressionBinaryNode op1() throws SyntaxException {
+        ExpressionBinaryNode out = new ExpressionBinaryBooleanNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        out.setToken(currToken);
         match(OP_OR);
+        return out;
     }
 
-    private void op2() throws SyntaxException {
+    private ExpressionBinaryNode op2() throws SyntaxException {
+        ExpressionBinaryNode out = new ExpressionBinaryBooleanNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        out.setToken(currToken);
         match(OP_AND);
+        return out;
     }
 
-    private void op3() throws SyntaxException {
+    private ExpressionBinaryNode op3() throws SyntaxException {
+        ExpressionBinaryNode out = new ExpressionBinaryBooleanNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        out.setToken(currToken);
         if (equalsAny(EQUALS)) {
             match(EQUALS);
         } else if (equalsAny(NOT_EQUALS)) {
@@ -1047,9 +1062,12 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else {
             throw buildSyntaxException("== o !=");
         }
+        return out;
     }
 
-    private void op4() throws SyntaxException {
+    private ExpressionBinaryNode op4() throws SyntaxException {
+        ExpressionBinaryNode out = new ExpressionBinaryBooleanNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        out.setToken(currToken);
         if (equalsAny(LESS_THAN)) {
             match(LESS_THAN);
         } else if (equalsAny(GREATER_THAN)) {
@@ -1061,9 +1079,12 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else {
             throw buildSyntaxException("< > <= >=");
         }
+        return out;
     }
 
-    private void op5() throws SyntaxException {
+    private ExpressionBinaryNode op5() throws SyntaxException {
+        ExpressionBinaryNode out = new ExpressionBinaryIntegerNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        out.setToken(currToken);
         if (equalsAny(ADD)) {
             match(ADD);
         } else if (equalsAny(SUB)) {
@@ -1071,9 +1092,12 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else {
             throw buildSyntaxException("+ o -");
         }
+        return out;
     }
 
-    private void op6() throws SyntaxException {
+    private ExpressionBinaryNode op6() throws SyntaxException {
+        ExpressionBinaryNode out = new ExpressionBinaryIntegerNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        out.setToken(currToken);
         if (equalsAny(MULTIPLY)) {
             match(MULTIPLY);
         } else if (equalsAny(DIVIDE)) {
@@ -1083,33 +1107,41 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         } else {
             throw buildSyntaxException("*, / o %");
         }
+        return out;
     }
 
     private ExpressionNode expresionUnaria() throws LexicalException, SyntaxException {
-        ExpressionNode out = null;
+        ExpressionNode out;
         if (equalsAny(ADD, SUB, OP_NOT)) {
-            ExpressionUnaryNode expressionUnaryNode = new ExpressionUnaryNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
-            expressionUnaryNode.setToken(currToken);
-            operadorUnario();
+            ExpressionUnaryNode expressionUnaryNode = operadorUnario();
             expressionUnaryNode.setOperandNode(operando());
+            out = expressionUnaryNode;
         } else if (equalsAny(NULL, BOOLEAN, INTEGER, CHARACTER, STRING, PARENTHESES_OPEN, ID_CLASS, THIS, NEW, ID_MET_VAR, STATIC)) {
-            operando();
+            out = operando();
         } else {
             throw buildSyntaxException("una expresion u operando");
         }
         return out;
     }
 
-    private void operadorUnario() throws SyntaxException {
+    private ExpressionUnaryNode operadorUnario() throws SyntaxException {
+        ExpressionUnaryNode out;
         if (equalsAny(ADD)) {
+            out = new ExpressionUnaryIntegerNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out.setToken(currToken);
             match(ADD);
         } else if (equalsAny(SUB)) {
+            out = new ExpressionUnaryIntegerNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out.setToken(currToken);
             match(SUB);
         } else if (equalsAny(OP_NOT)) {
+            out = new ExpressionUnaryBooleanNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out.setToken(currToken);
             match(OP_NOT);
         } else {
             throw buildSyntaxException("+ - !");
         }
+        return out;
     }
 
     private ExpressionNode operando() throws LexicalException, SyntaxException {
@@ -1122,23 +1154,28 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     }
 
     private TypeNode literal() throws SyntaxException {
+        TypeNode out;
+        IToken type = currToken;
         if (equalsAny(NULL)) {
             match(NULL);
-            return new TypeNullNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out = new TypeNullNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         } else if (equalsAny(BOOLEAN)) {
             match(BOOLEAN);
-            return new TypeBooleanNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out = new TypeBooleanNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         } else if (equalsAny(INTEGER)) {
             match(INTEGER);
-            return new TypeIntNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out = new TypeIntNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         } else if (equalsAny(CHARACTER)) {
             match(CHARACTER);
-            return new TypeCharNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out = new TypeCharNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
         } else if (equalsAny(STRING)) {
             match(STRING);
-            return new TypeStringNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out = new TypeStringNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        } else {
+            throw buildSyntaxException("tipo primitivo o null");
         }
-        throw buildSyntaxException("tipo primitivo o null");
+        out.setToken(type);
+        return out;
     }
 
     private SentenceNode preAccesoEstatico(AccessNode staticAccessNode) throws SyntaxException, LexicalException {
@@ -1214,22 +1251,30 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(PARENTHESES_OPEN)) {
             AccessMethodNode accessMethodNode = new AccessMethodNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             accessMethodNode.getActualParameters().addAll(argsActuales());
+            return accessMethodNode;
         } else if (!equalsAny(SEMICOLON, DOT, EQUALS, NOT_EQUALS, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, ADD, SUB, MULTIPLY, DIVIDE, REMAINDER, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, ASSIGN, ASSIGN_ADD, ASSIGN_SUB)) {
             throw buildSyntaxException("una expresion o )");
         }
-        return new AccessMethodNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        return new AccessVariableNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
     }
 
     private AccessNode accesoEstatico() throws SyntaxException, LexicalException {
-        AccessNode out = new AccessStaticNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        AccessStaticNode out = new AccessStaticNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        out.setToken(currToken);
         if (equalsAny(STATIC)) {
             match(STATIC);
             out.setToken(currToken);
+            String classTypeName = currToken.getLexeme();
+            IClassType classType = new TypeClass(classTypeName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out.setClassType(classType);
             match(ID_CLASS);
             varOMetodoEncadenado();
             encadenado();
         } else if (equalsAny(ID_CLASS)) {
             out.setToken(currToken);
+            String classTypeName = currToken.getLexeme();
+            IClassType classType = new TypeClass(classTypeName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            out.setClassType(classType);
             match(ID_CLASS);
             varOMetodoEncadenado();
             encadenado();
@@ -1320,15 +1365,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     }
 
     private ChainedNode varOMetodoEncadenadoAUX(IToken idToken, String line, int column) throws LexicalException, SyntaxException {
-        ChainedNode out;
         if (equalsAny(PARENTHESES_OPEN)) {
-            out = new ChainedMethodNode(line, idToken.getRowNumber(), column);
-            argsActuales();
+            ChainedMethodNode out = new ChainedMethodNode(line, idToken.getRowNumber(), column);
+            out.getActualParameters().addAll(argsActuales());
+            out.setToken(idToken);
+            return out;
         } else if (!equalsAny(DOT, MULTIPLY, DIVIDE, REMAINDER, ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, ASSIGN, ASSIGN_ADD, ASSIGN_SUB, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildSyntaxException("metodo encadenado, asignacion u operador");
-        } else {
-            out = new ChainedVariableNode(line, idToken.getRowNumber(), column);
         }
+        ChainedVariableNode out = new ChainedVariableNode(line, idToken.getRowNumber(), column);
         out.setToken(idToken);
         return out;
     }

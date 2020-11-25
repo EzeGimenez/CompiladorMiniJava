@@ -1,6 +1,7 @@
 package semantic_analyzer;
 
 import exceptions.SemanticException;
+import semantic_analyzer_ast.sentence_nodes.CodeBlockNode;
 
 import java.util.Map;
 
@@ -33,9 +34,13 @@ public interface ISymbolTable {
 
     IInterface getInterface(String name);
 
-    void consolidate();
+    void declarationCheck();
+
+    void sentencesCheck();
 
     void saveException(SemanticException e);
 
     void validate() throws SemanticException;
+
+    void setCurrAST(CodeBlockNode codeBlockNode);
 }

@@ -82,7 +82,7 @@ public class Interface extends IInterface {
     }
 
     @Override
-    public void consolidate() throws SemanticException {
+    public void declarationCheck() throws SemanticException {
         if (!didConsolidate) {
             didConsolidate = true;
             validateInheritance();
@@ -95,7 +95,7 @@ public class Interface extends IInterface {
     private void consolidateAncestors() throws SemanticException {
         for (IClassType c : inheritance) {
             IInterface iInterface = getInterfaceForReference(c);
-            iInterface.consolidate();
+            iInterface.declarationCheck();
         }
     }
 

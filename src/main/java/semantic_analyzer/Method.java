@@ -51,6 +51,14 @@ public class Method extends IMethod {
     }
 
     @Override
+    public IParameter getParameter(String parameterName) {
+        for (IParameter p : parameterList) {
+            if (Objects.equals(p.getName(), parameterName)) return p;
+        }
+        return null;
+    }
+
+    @Override
     public IMethod cloneForOverwrite(String line, int row, int column) {
         IMethod out = new Method(
                 accessMode.cloneForOverwrite(row, column),

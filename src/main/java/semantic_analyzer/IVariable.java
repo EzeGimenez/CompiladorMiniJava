@@ -7,9 +7,11 @@ public abstract class IVariable extends Entity {
         super(name, line, row, column);
     }
 
-    abstract IType getType();
+    public abstract IAccessMode getAccessMode();
 
-    abstract IVisibility getVisibility();
+    public abstract IType getType();
+
+    public abstract IVisibility getVisibility();
 
     public abstract void validate(IType genericType) throws SemanticException;
 
