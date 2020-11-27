@@ -1,6 +1,7 @@
 package semantic_analyzer;
 
 import exceptions.SemanticException;
+import semantic_analyzer_ast.type_checker.TypeChecker;
 
 public abstract class IType extends Entity {
 
@@ -13,4 +14,8 @@ public abstract class IType extends Entity {
     public abstract void validateOverwrite(IClassType ancestorClassRef, IType ancestorType) throws SemanticException;
 
     public abstract IType cloneForOverwrite(String line, int row, int column);
+
+    public abstract TypeChecker getTypeChecker();
+
+    public abstract boolean acceptTypeChecker(TypeChecker typeChecker);
 }

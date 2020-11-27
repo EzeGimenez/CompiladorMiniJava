@@ -11,7 +11,9 @@ public abstract class IClass extends Entity {
         super(name, line, row, column);
     }
 
-    public abstract Map<String, IVariable> getInheritedWithSameNameAttributes();
+    public abstract Map<String, IMethod> getInheritedMethodMap();
+
+    public abstract Map<String, IVariable> getInheritedAttributeMap();
 
     public abstract IClassType getParentClassRef();
 

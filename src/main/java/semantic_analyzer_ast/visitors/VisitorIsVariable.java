@@ -2,16 +2,16 @@ package semantic_analyzer_ast.visitors;
 
 import semantic_analyzer_ast.expression_nodes.*;
 
-public class VisitorIsCons implements VisitorExpression {
+public class VisitorIsVariable implements VisitorExpression {
 
-    private boolean isCons;
+    private boolean isVariable;
 
-    public VisitorIsCons() {
-        isCons = false;
+    public VisitorIsVariable() {
+        isVariable = false;
     }
 
-    public boolean isCons() {
-        return isCons;
+    public boolean isVariable() {
+        return isVariable;
     }
 
     @Override
@@ -31,12 +31,12 @@ public class VisitorIsCons implements VisitorExpression {
 
     @Override
     public void visit(AccessVariableNode accessVariableNode) {
-
+        isVariable = true;
     }
 
     @Override
     public void visit(AccessConstructorNode accessConstructorNode) {
-        isCons = true;
+
     }
 
     @Override
@@ -46,7 +46,7 @@ public class VisitorIsCons implements VisitorExpression {
 
     @Override
     public void visit(ChainedVariableNode chainedVariableNode) {
-
+        isVariable = true;
     }
 
     @Override
@@ -58,7 +58,6 @@ public class VisitorIsCons implements VisitorExpression {
     public void visit(ExpressionBinaryIntegerNode expressionBinary) {
 
     }
-
 
     @Override
     public void visit(TypeNullNode typeNode) {
@@ -89,5 +88,4 @@ public class VisitorIsCons implements VisitorExpression {
     public void visit(ExpressionUnaryNode expressionUnaryNode) {
 
     }
-
 }

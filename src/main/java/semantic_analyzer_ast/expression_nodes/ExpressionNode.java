@@ -21,7 +21,7 @@ public abstract class ExpressionNode extends Node {
 
     public abstract IType getType() throws SemanticException;
 
-    public abstract void validateForAssignment() throws SemanticException;
-
     public abstract void acceptVisitor(VisitorExpression visitorExpression);
+
+    public abstract void validate() throws SemanticException;
 }

@@ -12,17 +12,16 @@ public class AccessThisNode extends AccessNode {
     }
 
     @Override
-    public IType getType() {
+    public IType getCurrentType() {
         return SymbolTable.getInstance().getCurrClass().getConstructor().getReturnType();
     }
 
     @Override
-    public void validateForAssignment() throws SemanticException {
-        if (getChainedNode() == null) {
-            throw new SemanticException(this, "asignacion a this");
-        } else {
-            getChainedNode().validateForAssignemnt(getType());
+    public IType getType() throws SemanticException {
+        if (getChainedNode() != null) {
+            return getChainedNode().getType(getCurrentType());
         }
+        return getCurrentType();
     }
 
     @Override

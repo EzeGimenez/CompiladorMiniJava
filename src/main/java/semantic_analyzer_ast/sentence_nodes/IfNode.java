@@ -2,7 +2,7 @@ package semantic_analyzer_ast.sentence_nodes;
 
 import exceptions.SemanticException;
 import semantic_analyzer_ast.expression_nodes.ExpressionNode;
-import semantic_analyzer_ast.visitors.VisitorIsBoolean;
+import semantic_analyzer_ast.visitors.VisitorEndsInReturn;
 import semantic_analyzer_ast.visitors.VisitorSentence;
 
 public class IfNode extends SentenceNode {
@@ -46,15 +46,24 @@ public class IfNode extends SentenceNode {
     @Override
     public void validate() throws SemanticException {
         condition.validate();
-        VisitorIsBoolean visitorIsBoolean = new VisitorIsBoolean();
-        condition.acceptVisitor(visitorIsBoolean);
-        if (!visitorIsBoolean.isBoolean()) {
-            throw new SemanticException(condition, "debe ser una expresion con tipo boolean");
+        if (!condition.getType().getName().equals("boolean")) {
+            throw new SemanticException(this, "debe ser una expresion con tipo boolean");
         }
         body.validate();
         if (elseNode != null) {
             elseNode.validate();
         }
 
+    }
+
+    public boolean endsInReturn() {
+        VisitorEndsInReturn visitorEndsInReturn = new VisitorEndsInReturn();
+        body.acceptVisitor(visitorEndsInReturn);
+        if (visitorEndsInReturn.endsInReturn()) {
+            if (elseNode != null) {
+                return elseNode.endsInReturn();
+            }
+        }
+        return false;
     }
 }

@@ -1,6 +1,8 @@
 package semantic_analyzer;
 
 import exceptions.SemanticException;
+import semantic_analyzer_ast.type_checker.TypeChecker;
+import semantic_analyzer_ast.type_checker.TypePrimitiveChecker;
 
 import java.util.Objects;
 
@@ -32,5 +34,15 @@ public abstract class TypePrimitive extends IType {
         if (ancestorType == null || !Objects.equals(getName(), ancestorType.getName())) {
             throw new SemanticException(this, "distinto tipo");
         }
+    }
+
+    @Override
+    public TypeChecker getTypeChecker() {
+        return new TypePrimitiveChecker(this);
+    }
+
+    @Override
+    public boolean acceptTypeChecker(TypeChecker typeChecker) {
+        return typeChecker.isCompatible(this);
     }
 }

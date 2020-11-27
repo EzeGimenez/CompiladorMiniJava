@@ -1,6 +1,6 @@
 package semantic_analyzer_ast.expression_nodes;
 
-import exceptions.SemanticException;
+import semantic_analyzer_ast.visitors.VisitorExpression;
 
 public abstract class ExpressionUnaryNode extends ExpressionNode {
     private ExpressionNode operandNode;
@@ -18,7 +18,11 @@ public abstract class ExpressionUnaryNode extends ExpressionNode {
     }
 
     @Override
-    public void validate() throws SemanticException {
-
+    public void acceptVisitor(VisitorExpression visitorExpression) {
+        if (getChainedNode() != null) {
+            getChainedNode().acceptVisitor(visitorExpression);
+        } else {
+            visitorExpression.visit(this);
+        }
     }
 }

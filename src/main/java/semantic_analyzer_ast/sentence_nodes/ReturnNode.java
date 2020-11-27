@@ -1,8 +1,8 @@
 package semantic_analyzer_ast.sentence_nodes;
 
 import exceptions.SemanticException;
+import semantic_analyzer.IType;
 import semantic_analyzer.SymbolTable;
-import semantic_analyzer.TypeVoid;
 import semantic_analyzer_ast.expression_nodes.ExpressionNode;
 import semantic_analyzer_ast.visitors.VisitorSentence;
 
@@ -25,19 +25,29 @@ public class ReturnNode extends SentenceNode {
     public void validate() throws SemanticException {
         if (expressionNode != null) {
             expressionNode.validate();
-            if (!expressionNode.getType().equals(SymbolTable.getInstance().getCurrMethod().getReturnType())) {
-                throw new SemanticException(this, "no es del mismo tipo que el requerido para el retorno");
+
+            if (isConstructor()) {
+                throw new SemanticException(expressionNode, "sentencia de retorno con una expresion dentro de un constructor");
+            }
+
+            IType requiredType = SymbolTable.getInstance().getCurrMethod().getReturnType();
+            if (!expressionNode.getType().acceptTypeChecker(requiredType.getTypeChecker())) {
+                throw new SemanticException(expressionNode, "no es del mismo tipo que el requerido para el retorno");
             }
         } else {
-            //TODO change this ugly instanceof
-            if (!(SymbolTable.getInstance().getCurrMethod().getReturnType() instanceof TypeVoid)) {
+            if (!(SymbolTable.getInstance().getCurrMethod().getReturnType().getName().equals("void"))
+                    && !isConstructor()) {
                 throw new SemanticException(this, "el metodo requiere tipo de retorno");
             }
         }
-        //TODO check for missing return statement
+    }
+
+    public boolean isConstructor() {
+        return SymbolTable.getInstance().getCurrMethod() == SymbolTable.getInstance().getCurrClass().getConstructor();
     }
 
     @Override
+
     public void acceptVisitor(VisitorSentence v) {
         v.visit(this);
     }

@@ -1,6 +1,8 @@
 package semantic_analyzer;
 
 import exceptions.SemanticException;
+import semantic_analyzer_ast.type_checker.TypeChecker;
+import semantic_analyzer_ast.type_checker.TypeClassChecker;
 
 import java.util.Objects;
 
@@ -97,6 +99,16 @@ public class TypeClass extends IClassType {
     @Override
     public IType cloneForOverwrite(String line, int row, int column) {
         return new TypeClass(getName(), line, row, column);
+    }
+
+    @Override
+    public TypeChecker getTypeChecker() {
+        return new TypeClassChecker(this);
+    }
+
+    @Override
+    public boolean acceptTypeChecker(TypeChecker typeChecker) {
+        return typeChecker.isCompatible(this);
     }
 
     private boolean equalsToGenericType(IType holderClassGenericType) {

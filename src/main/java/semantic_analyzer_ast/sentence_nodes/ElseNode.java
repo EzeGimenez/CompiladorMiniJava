@@ -1,14 +1,12 @@
 package semantic_analyzer_ast.sentence_nodes;
 
 import exceptions.SemanticException;
-import semantic_analyzer_ast.expression_nodes.ExpressionNode;
+import semantic_analyzer_ast.visitors.VisitorEndsInReturn;
 import semantic_analyzer_ast.visitors.VisitorSentence;
 
 public class ElseNode extends SentenceNode {
 
-    private ExpressionNode condition;
     private SentenceNode sentenceNode;
-    private ElseNode elseNode;
 
     public ElseNode(String line, int row, int column) {
         super(line, row, column);
@@ -22,14 +20,6 @@ public class ElseNode extends SentenceNode {
         this.sentenceNode = sentenceNode;
     }
 
-    public ExpressionNode getCondition() {
-        return condition;
-    }
-
-    public void setCondition(ExpressionNode condition) {
-        this.condition = condition;
-    }
-
     @Override
     public void acceptVisitor(VisitorSentence v) {
         v.visit(this);
@@ -37,6 +27,16 @@ public class ElseNode extends SentenceNode {
 
     @Override
     public void validate() throws SemanticException {
+        if (sentenceNode == null) {
+            throw new SemanticException(this, "el cuerpo del else no puede ser vacio");
+        }
+        sentenceNode.validate();
+    }
 
+    public boolean endsInReturn() {
+        VisitorEndsInReturn visitorEndsInReturn = new VisitorEndsInReturn();
+        sentenceNode.acceptVisitor(visitorEndsInReturn);
+
+        return visitorEndsInReturn.endsInReturn();
     }
 }

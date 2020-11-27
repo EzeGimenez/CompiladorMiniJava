@@ -21,7 +21,8 @@ public class AccessVariableNode extends AccessNode {
         return getCurrentType();
     }
 
-    private IType getCurrentType() throws SemanticException {
+    @Override
+    public IType getCurrentType() throws SemanticException {
         IParameter parameter = getParameter();
         if (parameter != null) {
             return parameter.getType();
@@ -34,15 +35,27 @@ public class AccessVariableNode extends AccessNode {
         if (variable != null) {
             return variable.getType();
         }
-        throw new SemanticException(this, "variable no definida");
+        throw new SemanticException(this, "variable no definida o inaccesible");
     }
 
     private IParameter getParameter() {
         return SymbolTable.getInstance().getCurrMethod().getParameter(getToken().getLexeme());
     }
 
-    private IVariable getAttribute() {
-        return SymbolTable.getInstance().getCurrClass().getAttributeMap().get(getToken().getLexeme());
+    private IVariable getAttribute() throws SemanticException {
+        IClass classType = SymbolTable.getInstance().getCurrClass();
+        if (classType != null) {
+            if (classType.containsAttribute(getToken().getLexeme())) {
+                IVariable out = classType.getAttributeMap().get(getToken().getLexeme());
+                if (out != null) {
+                    return out;
+                }
+                return classType.getInheritedAttributeMap().get(getToken().getLexeme());
+            }
+            return null;
+        } else {
+            throw new SemanticException(this, "clase no encontrada");
+        }
     }
 
     private DeclarationNode getLocalDeclaration() {
@@ -58,11 +71,6 @@ public class AccessVariableNode extends AccessNode {
     }
 
     @Override
-    public void validateForAssignment() throws SemanticException {
-
-    }
-
-    @Override
     public void acceptVisitor(VisitorExpression visitorExpression) {
         if (getChainedNode() != null) {
             getChainedNode().acceptVisitor(visitorExpression);
@@ -75,19 +83,33 @@ public class AccessVariableNode extends AccessNode {
     public void validate() throws SemanticException {
         IParameter parameter = getParameter();
         if (parameter != null) {
+            validateChainedNode();
             return;
         }
         DeclarationNode declarationNode = getLocalDeclaration();
         if (declarationNode != null) {
+            validateChainedNode();
             return;
         }
         IVariable variable = getAttribute();
         if (variable != null) {
-            if (isStaticMethod() && variable.getAccessMode().getName().equals("dynamic")) {
-                throw new SemanticException(this, "acceso a variable dinamica desde contexto estatico");
+            if (isStaticMethod() && variable.getAccessMode() == null) {
+                throw new SemanticException(this, "acceso a atributo de instancia desde contexto estatico");
+            }
+            attributeCheck(variable);
+            validateChainedNode();
+            return;
+        }
+        throw new SemanticException(this, "variable no definida o inaccesible");
+    }
+
+    private void attributeCheck(IVariable variable) throws SemanticException {
+        IClass classType = SymbolTable.getInstance().getCurrClass();
+        if (classType.getInheritedAttributeMap().containsValue(variable)) {
+            if (variable.getVisibility().getName().equals("private")) {
+                throw new SemanticException(this, "intento de acceso a variable privada");
             }
         }
-        throw new SemanticException(this, "variable no definida");
     }
 
     private boolean isStaticMethod() {

@@ -1,5 +1,6 @@
 package semantic_analyzer_ast.sentence_nodes;
 
+import exceptions.SemanticException;
 import semantic_analyzer_ast.expression_nodes.Node;
 import semantic_analyzer_ast.visitors.VisitorSentence;
 
@@ -9,4 +10,6 @@ public abstract class SentenceNode extends Node {
     }
 
     public abstract void acceptVisitor(VisitorSentence v);
+
+    public abstract void validate() throws SemanticException;
 }

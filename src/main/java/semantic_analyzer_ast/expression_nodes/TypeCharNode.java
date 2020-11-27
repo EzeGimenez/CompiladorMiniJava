@@ -2,6 +2,8 @@ package semantic_analyzer_ast.expression_nodes;
 
 import exceptions.SemanticException;
 import semantic_analyzer.IType;
+import semantic_analyzer.TypeChar;
+import semantic_analyzer_ast.visitors.VisitorExpression;
 
 public class TypeCharNode extends TypeNode {
     public TypeCharNode(String line, int row, int column) {
@@ -10,11 +12,16 @@ public class TypeCharNode extends TypeNode {
 
     @Override
     public IType getType() {
-        return null;
+        return new TypeChar(getLine(), getRow(), getColumn());
     }
 
     @Override
     public void validate() throws SemanticException {
 
+    }
+
+    @Override
+    public void acceptVisitor(VisitorExpression visitorExpression) {
+        visitorExpression.visit(this);
     }
 }

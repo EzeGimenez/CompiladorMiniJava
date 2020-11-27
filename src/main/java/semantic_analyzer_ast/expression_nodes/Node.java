@@ -1,6 +1,5 @@
 package semantic_analyzer_ast.expression_nodes;
 
-import exceptions.SemanticException;
 import lexical_analyzer.IToken;
 
 public abstract class Node {
@@ -35,6 +34,4 @@ public abstract class Node {
     public int getColumn() {
         return column;
     }
-
-    public abstract void validate() throws SemanticException;
 }

@@ -4,6 +4,7 @@ import exceptions.SemanticException;
 import lexical_analyzer.TokenDescriptor;
 import semantic_analyzer.IType;
 import semantic_analyzer_ast.expression_nodes.ExpressionNode;
+import semantic_analyzer_ast.visitors.VisitorIsVariable;
 import semantic_analyzer_ast.visitors.VisitorSentence;
 
 public class AssignmentNode extends SentenceNode {
@@ -39,10 +40,15 @@ public class AssignmentNode extends SentenceNode {
     @Override
     public void validate() throws SemanticException {
         leftSide.validate();
-        leftSide.validateForAssignment();
+        VisitorIsVariable visitorIsVariable = new VisitorIsVariable();
+        leftSide.acceptVisitor(visitorIsVariable);
+        if (!visitorIsVariable.isVariable()) {
+            throw new SemanticException(leftSide, "no es una variable");
+        }
+
         rightSide.validate();
         IType leftSideType = leftSide.getType();
-        if (!leftSideType.equals(rightSide.getType())) {
+        if (!rightSide.getType().acceptTypeChecker(leftSideType.getTypeChecker())) {
             throw new SemanticException(this, "tipos incompatibles");
         }
         if (getToken().getDescriptor().equals(TokenDescriptor.ASSIGN_ADD) ||
@@ -51,6 +57,7 @@ public class AssignmentNode extends SentenceNode {
                 throw new SemanticException(this, "+= o -= con tipo distinto a entero");
             }
         }
+
     }
 
 }

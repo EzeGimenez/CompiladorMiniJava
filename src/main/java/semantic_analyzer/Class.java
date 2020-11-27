@@ -10,12 +10,13 @@ import java.util.Map;
 public class Class extends IClass {
 
     private final Collection<IClassType> interfaceInheritanceList;
-    private final Map<String, IVariable> attributeMap, inheritedWithSameNameAttributes;
-    private final Map<String, IMethod> methodMap;
+    private final Map<String, IVariable> attributeMap, inheritedAttributes;
+    private final Map<String, IMethod> methodMap, inheritedMethodMap;
     private IClassType parentClassRef;
     private IMethod constructor;
     private IType genericType;
     private boolean didConsolidate;
+
 
     public Class(String name) {
         this(name, "", 0, 0);
@@ -24,15 +25,21 @@ public class Class extends IClass {
     public Class(String name, String line, int row, int column) {
         super(name, line, row, column);
         attributeMap = new HashMap<>();
-        inheritedWithSameNameAttributes = new HashMap<>();
+        inheritedAttributes = new HashMap<>();
         methodMap = new HashMap<>();
+        inheritedMethodMap = new HashMap<>();
         interfaceInheritanceList = new ArrayList<>();
         didConsolidate = false;
     }
 
     @Override
-    public Map<String, IVariable> getInheritedWithSameNameAttributes() {
-        return inheritedWithSameNameAttributes;
+    public Map<String, IMethod> getInheritedMethodMap() {
+        return inheritedMethodMap;
+    }
+
+    @Override
+    public Map<String, IVariable> getInheritedAttributeMap() {
+        return inheritedAttributes;
     }
 
     @Override
@@ -97,12 +104,12 @@ public class Class extends IClass {
 
     @Override
     public boolean containsAttribute(String name) {
-        return attributeMap.containsKey(name);
+        return attributeMap.containsKey(name) || inheritedAttributes.containsKey(name);
     }
 
     @Override
     public boolean containsMethod(String name) {
-        return methodMap.containsKey(name);
+        return methodMap.containsKey(name) || inheritedMethodMap.containsKey(name);
     }
 
     @Override
@@ -162,18 +169,20 @@ public class Class extends IClass {
 
     @Override
     public void sentencesCheck() {
-        try {
-            SymbolTable.getInstance().setCurrMethod(constructor);
-            constructor.sentencesCheck();
-        } catch (SemanticException e) {
-            SymbolTable.getInstance().saveException(e);
-        }
-        for (IMethod m : methodMap.values()) {
+        if (!getName().equals("Object") && !getName().equals("System")) {
             try {
-                SymbolTable.getInstance().setCurrMethod(m);
-                m.sentencesCheck();
+                SymbolTable.getInstance().setCurrMethod(constructor);
+                constructor.sentencesCheck();
             } catch (SemanticException e) {
                 SymbolTable.getInstance().saveException(e);
+            }
+            for (IMethod m : methodMap.values()) {
+                try {
+                    SymbolTable.getInstance().setCurrMethod(m);
+                    m.sentencesCheck();
+                } catch (SemanticException e) {
+                    SymbolTable.getInstance().saveException(e);
+                }
             }
         }
     }
@@ -254,15 +263,29 @@ public class Class extends IClass {
         for (IMethod inheritedMethod : iClass.getMethodMap().values()) {
             if (!inheritedMethod.getName().equals("main")) {
                 methodWithSameName = methodMap.get(inheritedMethod.getName());
+                methodWithSameName = methodWithSameName == null ? inheritedMethodMap.get(inheritedMethod.getName()) : methodWithSameName;
                 if (methodWithSameName != null) {
                     methodWithSameName.validateOverwrite(parentClassRef, inheritedMethod);
                 } else {
                     int columnFix = getColumn() + inheritedMethod.getName().length() + getName().length();
-                    methodMap.put(
+                    inheritedMethodMap.put(
                             inheritedMethod.getName(),
                             inheritedMethod.cloneForOverwrite(getLine(), getRow(), columnFix)
                     );
                 }
+            }
+        }
+        for (IMethod inheritedMethod : iClass.getInheritedMethodMap().values()) {
+            methodWithSameName = methodMap.get(inheritedMethod.getName());
+            methodWithSameName = methodWithSameName == null ? inheritedMethodMap.get(inheritedMethod.getName()) : methodWithSameName;
+            if (methodWithSameName != null) {
+                methodWithSameName.validateOverwrite(parentClassRef, inheritedMethod);
+            } else {
+                int columnFix = getColumn() + inheritedMethod.getName().length() + getName().length();
+                inheritedMethodMap.put(
+                        inheritedMethod.getName(),
+                        inheritedMethod.cloneForOverwrite(getLine(), getRow(), columnFix)
+                );
             }
         }
     }
@@ -286,6 +309,7 @@ public class Class extends IClass {
         IInterface iInterface = getInterfaceForReference(interfaceRef);
         for (IMethod inheritedMethod : iInterface.getMethodMap().values()) {
             methodWithSameName = methodMap.get(inheritedMethod.getName());
+            methodWithSameName = methodWithSameName == null ? inheritedMethodMap.get(inheritedMethod.getName()) : methodWithSameName;
             if (methodWithSameName != null) {
                 methodWithSameName.validateOverwrite(interfaceRef, inheritedMethod);
             } else {
@@ -304,13 +328,12 @@ public class Class extends IClass {
         if (parentClassRef != null) {
             IClass parentClass = SymbolTable.getInstance().getClass(parentClassRef.getName());
             for (IVariable v : parentClass.getAttributeMap().values()) {
-                IVariable variableWithSameName = attributeMap.get(v.getName());
                 IVariable vClone = v.cloneForOverwrite(parentClassRef);
-                if (variableWithSameName != null) {
-                    inheritedWithSameNameAttributes.put(v.getName(), vClone);
-                } else {
-                    attributeMap.put(v.getName(), vClone);
-                }
+                inheritedAttributes.put(v.getName(), vClone);
+            }
+            for (IVariable v : parentClass.getInheritedAttributeMap().values()) {
+                IVariable vClone = v.cloneForOverwrite(parentClassRef);
+                inheritedAttributes.put(v.getName(), vClone);
             }
         }
     }

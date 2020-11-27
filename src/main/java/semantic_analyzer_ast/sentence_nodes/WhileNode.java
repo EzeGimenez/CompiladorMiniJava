@@ -35,7 +35,7 @@ public class WhileNode extends SentenceNode {
         VisitorIsBoolean visitorIsBoolean = new VisitorIsBoolean();
         condition.acceptVisitor(visitorIsBoolean);
         if (!visitorIsBoolean.isBoolean()) {
-            throw new SemanticException(condition, "debe ser una expresion con tipo boolean");
+            throw new SemanticException(this, "debe ser una expresion con tipo boolean");
         }
         body.validate();
     }

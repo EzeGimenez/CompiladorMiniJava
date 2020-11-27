@@ -2,10 +2,10 @@ package semantic_analyzer_ast.expression_nodes;
 
 import exceptions.SemanticException;
 import semantic_analyzer.IType;
+import semantic_analyzer.SymbolTable;
 import semantic_analyzer_ast.visitors.VisitorExpression;
 
 public class AccessStaticNode extends AccessNode {
-
     private IType classType;
 
     public AccessStaticNode(String line, int row, int column) {
@@ -13,11 +13,16 @@ public class AccessStaticNode extends AccessNode {
     }
 
     @Override
+    public IType getCurrentType() throws SemanticException {
+        return classType;
+    }
+
+    @Override
     public IType getType() throws SemanticException {
         if (getChainedNode() != null) {
-            return getChainedNode().getType(classType);
+            return getChainedNode().getType(getCurrentType());
         }
-        return classType;
+        throw new SemanticException(this, "sentencia invalida");
     }
 
     @Override
@@ -27,14 +32,6 @@ public class AccessStaticNode extends AccessNode {
         } else {
             visitorExpression.visit(this);
         }
-    }
-
-    @Override
-    public void validateForAssignment() throws SemanticException {
-        if (getChainedNode() == null) {
-            throw new SemanticException(this, "asignacion a acceso estatico");
-        }
-        getChainedNode().validateForAssignemnt(getType());
     }
 
     public IType getClassType() {
@@ -47,7 +44,13 @@ public class AccessStaticNode extends AccessNode {
 
     @Override
     public void validate() throws SemanticException {
-
+        if (getChainedNode() == null) {
+            throw new SemanticException(this, "sentencia invalida");
+        }
+        if (SymbolTable.getInstance().getClass(classType.getName()) == null) {
+            throw new SemanticException(this, "clase no encontrada");
+        }
+        getChainedNode().validateStatic(getCurrentType());
     }
 
 }

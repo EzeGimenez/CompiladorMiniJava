@@ -1,7 +1,5 @@
 package semantic_analyzer_ast.expression_nodes;
 
-import exceptions.SemanticException;
-
 public abstract class ExpressionBinaryNode extends ExpressionNode {
 
     private ExpressionNode leftSide, rightSide;
@@ -24,15 +22,5 @@ public abstract class ExpressionBinaryNode extends ExpressionNode {
 
     public void setRightSide(ExpressionNode rightSide) {
         this.rightSide = rightSide;
-    }
-
-    @Override
-    public void validate() throws SemanticException {
-
-    }
-
-    @Override
-    public void validateForAssignment() throws SemanticException {
-        throw new SemanticException(this, "no se le puede asignar algo a una expresion binaria");
     }
 }

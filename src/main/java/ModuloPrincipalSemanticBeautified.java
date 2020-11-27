@@ -59,7 +59,7 @@ public class ModuloPrincipalSemanticBeautified implements ModuloPrincipal {
     private void consolidate() {
         boolean halt = false;
         SymbolTable.getInstance().declarationCheck();
-
+        SymbolTable.getInstance().sentencesCheck();
         while (!halt) {
             try {
                 SymbolTable.getInstance().validate();

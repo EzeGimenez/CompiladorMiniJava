@@ -62,7 +62,7 @@ public class ModuloPrincipalSemantic implements ModuloPrincipal {
     private boolean consolidate() {
         boolean hasExceptions = false, halt = false;
         SymbolTable.getInstance().declarationCheck();
-
+        SymbolTable.getInstance().sentencesCheck();
         while (!halt) {
             try {
                 SymbolTable.getInstance().validate();

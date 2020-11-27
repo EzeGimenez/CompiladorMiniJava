@@ -18,7 +18,9 @@ public interface VisitorExpression {
 
     void visit(ChainedVariableNode chainedVariableNode);
 
-    void visit(ExpressionBinaryNode expressionBinary);
+    void visit(ExpressionBinaryBooleanNode expressionBinary);
+
+    void visit(ExpressionBinaryIntegerNode expressionBinary);
 
     void visit(TypeNullNode typeNode);
 
@@ -29,4 +31,6 @@ public interface VisitorExpression {
     void visit(TypeIntNode typeNode);
 
     void visit(TypeStringNode typeNode);
+
+    void visit(ExpressionUnaryNode expressionUnaryNode);
 }

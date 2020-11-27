@@ -1,6 +1,11 @@
 package semantic_analyzer;
 
+import exceptions.SemanticException;
+import semantic_analyzer_ast.sentence_nodes.SentenceNode;
+import semantic_analyzer_ast.visitors.VisitorEndsInReturn;
+
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
@@ -68,10 +73,47 @@ public class Method extends IMethod {
                 row,
                 column
         );
+        out.setAbstractSyntaxTree(getAbstractSyntaxTree());
         for (IParameter p : parameterList) {
             out.addParameter(p.cloneForOverWrite(line, row, column));
         }
         return out;
     }
 
+    @Override
+    public void sentencesCheck() throws SemanticException {
+        super.sentencesCheck();
+        findReturnStatement();
+    }
+
+    private void findReturnStatement() throws SemanticException {
+        if (!getReturnType().getName().equals("void")) {
+
+            VisitorEndsInReturn visitorEndsInReturn = new VisitorEndsInReturn();
+            Iterator<SentenceNode> sentenceNodeIterator = getAbstractSyntaxTree().getSentences().iterator();
+
+            SentenceNode currSentence = null;
+            if (sentenceNodeIterator.hasNext()) {
+                currSentence = sentenceNodeIterator.next();
+            }
+
+            while (currSentence != null) {
+                currSentence.acceptVisitor(visitorEndsInReturn);
+
+                if (sentenceNodeIterator.hasNext()) {
+                    currSentence = sentenceNodeIterator.next();
+                    if (visitorEndsInReturn.endsInReturn()) {
+                        throw new SemanticException(currSentence, "codigo muerto desde aca");
+                    }
+                } else {
+                    currSentence = null;
+                }
+            }
+            if (!visitorEndsInReturn.endsInReturn()) {
+                throw new SemanticException(this, "falta una sentencia de retorno");
+            }
+
+
+        }
+    }
 }

@@ -26,21 +26,16 @@ public class VisitorIsMethod implements VisitorExpression {
 
     @Override
     public void visit(AccessMethodNode accessMethodNode) {
-
-    }
-
-    @Override
-    public void visit(AccessVariableNode accessVariableNode) {
         isMethod = true;
     }
 
     @Override
-    public void visit(AccessConstructorNode accessConstructorNode) {
+    public void visit(AccessVariableNode accessVariableNode) {
 
     }
 
     @Override
-    public void visit(TypeNode accessConstructorNode) {
+    public void visit(AccessConstructorNode accessConstructorNode) {
 
     }
 
@@ -55,7 +50,42 @@ public class VisitorIsMethod implements VisitorExpression {
     }
 
     @Override
-    public void visit(ExpressionBinaryNode expressionBinary) {
+    public void visit(ExpressionBinaryBooleanNode expressionBinary) {
+
+    }
+
+    @Override
+    public void visit(ExpressionBinaryIntegerNode expressionBinary) {
+
+    }
+
+    @Override
+    public void visit(TypeNullNode typeNode) {
+
+    }
+
+    @Override
+    public void visit(TypeCharNode typeNode) {
+
+    }
+
+    @Override
+    public void visit(TypeBooleanNode typeNode) {
+
+    }
+
+    @Override
+    public void visit(TypeIntNode typeNode) {
+
+    }
+
+    @Override
+    public void visit(TypeStringNode typeNode) {
+
+    }
+
+    @Override
+    public void visit(ExpressionUnaryNode expressionUnaryNode) {
 
     }
 }

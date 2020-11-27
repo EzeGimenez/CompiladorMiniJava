@@ -1,13 +1,11 @@
 package semantic_analyzer_ast.expression_nodes;
 
 import exceptions.SemanticException;
-import semantic_analyzer.IAccessMode;
-import semantic_analyzer.IClass;
-import semantic_analyzer.IType;
-import semantic_analyzer.SymbolTable;
+import semantic_analyzer.*;
 import semantic_analyzer_ast.visitors.VisitorExpression;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class ChainedMethodNode extends ChainedNode {
@@ -19,33 +17,8 @@ public class ChainedMethodNode extends ChainedNode {
     }
 
     @Override
-    public void validate() throws SemanticException {
-
-    }
-
-    @Override
-    public IType getType() throws SemanticException {
-        return null;
-    }
-
-    @Override
-    public void validateForAssignment() throws SemanticException {
-
-    }
-
-    @Override
     public void acceptVisitor(VisitorExpression visitorExpression) {
         visitorExpression.visit(this);
-    }
-
-    @Override
-    public void validateForAssignemnt(IType prevType) throws SemanticException {
-        validate(prevType);
-        if (getChainedNode() != null) {
-            getChainedNode().validateForAssignemnt(getType(prevType));
-        } else {
-            throw new SemanticException(this, "asignacion a un método");
-        }
     }
 
     public List<ExpressionNode> getActualParameters() {
@@ -54,51 +27,83 @@ public class ChainedMethodNode extends ChainedNode {
 
     @Override
     public void validate(IType prevType) throws SemanticException {
+        IMethod method = getMethod(prevType);
+
+        if (!isInConstructor()
+                && isAStaticContext()
+                && method.getAccessMode().getName().equals("dynamic")) {
+
+            throw new SemanticException(this, "acceso a metodo dinamico desde contexto estatico");
+        }
+        validateParameters(method);
+
         if (getChainedNode() != null) {
-            getChainedNode().validate(getCurrentType(prevType));
-        } else {
-            if (isStaticMethod() && getMethodAccessMode(prevType).equals("dynamic")) {
-                throw new SemanticException(this, "acceso a metodo dinámico dentro de metodo estatico");
+            getChainedNode().validate(method.getReturnType());
+        }
+    }
+
+    private boolean isInConstructor() {
+        return SymbolTable.getInstance().getCurrMethod() == SymbolTable.getInstance().getCurrClass().getConstructor();
+    }
+
+    private boolean isAStaticContext() {
+        IAccessMode accessMode = SymbolTable.getInstance().getCurrMethod().getAccessMode();
+        return accessMode.getName().equals("static");
+    }
+
+    private void validateParameters(IMethod method) throws SemanticException {
+        if (actualParameters.size() != method.getParameterList().size()) {
+            throw new SemanticException(this, "distinto numero de parametros");
+        }
+
+        Iterator<ExpressionNode> expressionNodeIterator = actualParameters.iterator();
+        Iterator<IParameter> parameterIterator = method.getParameterList().iterator();
+
+        ExpressionNode expressionNode;
+        IType actualType, parameterType;
+        while (expressionNodeIterator.hasNext() && parameterIterator.hasNext()) {
+            expressionNode = expressionNodeIterator.next();
+            actualType = expressionNode.getType();
+            parameterType = parameterIterator.next().getType();
+
+            if (!actualType.acceptTypeChecker(parameterType.getTypeChecker())) {
+                throw new SemanticException(expressionNode, "tipo de parametro diferente");
             }
         }
     }
 
-    private String getMethodAccessMode(IType prevType) throws SemanticException {
+    private IMethod getMethod(IType prevType) throws SemanticException {
+        if (prevType.getName().equals("void")) {
+            throw new SemanticException(this, "acceso invalido: el tipo de retorno anterior es void");
+        }
+
         IClass classType = SymbolTable.getInstance().getClass(prevType.getName());
         if (classType != null) {
             if (!classType.containsMethod(getToken().getLexeme())) {
-                throw new SemanticException(this, "no se encontró un metodo con nombre " + getToken().getLexeme());
+                throw new SemanticException(this, "no se encontro un metodo con nombre " + getToken().getLexeme());
             } else {
-                return classType.getMethodMap().get(getToken().getLexeme()).getAccessMode().getName();
+                IMethod out = classType.getMethodMap().get(getToken().getLexeme());
+                if (out == null) out = classType.getInheritedMethodMap().get((getToken().getLexeme()));
+                return out;
             }
         } else {
-            throw new SemanticException(this, "clase no encontrada");
+            throw new SemanticException(this, "acceso invalido");
         }
-    }
-
-    private boolean isStaticMethod() {
-        IAccessMode accessMode = SymbolTable.getInstance().getCurrMethod().getAccessMode();
-        return accessMode.getName().equals("static");
     }
 
     @Override
     public IType getType(IType prevType) throws SemanticException {
         if (getChainedNode() != null) {
-            return getChainedNode().getType(getCurrentType(prevType));
+            return getChainedNode().getType(getMethod(prevType).getReturnType());
         }
-        return getCurrentType(prevType);
+        return getMethod(prevType).getReturnType();
     }
 
-    private IType getCurrentType(IType prevType) throws SemanticException {
-        IClass classType = SymbolTable.getInstance().getClass(prevType.getName());
-        if (classType != null) {
-            if (!classType.containsMethod(getToken().getLexeme())) {
-                throw new SemanticException(this, "no se encontró un metodo con nombre " + getToken().getLexeme());
-            } else {
-                return classType.getMethodMap().get(getToken().getLexeme()).getReturnType();
-            }
-        } else {
-            throw new SemanticException(this, "clase no encontrada");
+    @Override
+    public void validateStatic(IType prevType) throws SemanticException {
+        validate(prevType);
+        if (!getMethod(prevType).getAccessMode().getName().equals("static")) {
+            throw new SemanticException(this, "intento de acceso a metodo dinamico de manera estatica");
         }
     }
 }

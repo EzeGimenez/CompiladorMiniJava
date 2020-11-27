@@ -1,7 +1,5 @@
 package semantic_analyzer_ast.expression_nodes;
 
-import exceptions.SemanticException;
-
 public class GenericityNode extends Node {
     private GenericityNode genericityNode;
 
@@ -17,8 +15,4 @@ public class GenericityNode extends Node {
         this.genericityNode = genericityNode;
     }
 
-    @Override
-    public void validate() throws SemanticException {
-
-    }
 }

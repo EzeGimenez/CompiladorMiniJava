@@ -58,9 +58,14 @@ public class DeclarationNode extends SentenceNode {
 
             VisitorDeclarationFinder visitorDeclarationFinder = new VisitorDeclarationFinder(getToken().getLexeme());
 
-            while (iterator.hasNext() && currentSentence != this) {
+            while (currentSentence != this) {
                 currentSentence.acceptVisitor(visitorDeclarationFinder);
-                currentSentence = iterator.next();
+
+                if (iterator.hasNext()) {
+                    currentSentence = iterator.next();
+                } else {
+                    break;
+                }
             }
             if (visitorDeclarationFinder.getDeclarationNodeFound() != null) {
                 throw new SemanticException(this, "nombre de variable duplicado");
@@ -72,7 +77,7 @@ public class DeclarationNode extends SentenceNode {
         List<IParameter> parametersList = SymbolTable.getInstance().getCurrMethod().getParameterList();
         for (IParameter p : parametersList) {
             if (p.getName().equals(getToken().getLexeme())) {
-                throw new SemanticException(this, "nombre de varaible duplicado");
+                throw new SemanticException(this, "nombre de variable duplicado");
             }
         }
     }

@@ -46,7 +46,12 @@ public class VisitorIsBoolean implements VisitorExpression {
     }
 
     @Override
-    public void visit(ExpressionBinaryNode expressionBinary) {
+    public void visit(ExpressionBinaryBooleanNode expressionBinary) {
+        isBoolean = true;
+    }
+
+    @Override
+    public void visit(ExpressionBinaryIntegerNode expressionBinary) {
 
     }
 
@@ -76,6 +81,11 @@ public class VisitorIsBoolean implements VisitorExpression {
 
     @Override
     public void visit(TypeStringNode typeNode) {
+
+    }
+
+    @Override
+    public void visit(ExpressionUnaryNode expressionUnaryNode) {
 
     }
 }

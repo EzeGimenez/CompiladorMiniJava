@@ -11,6 +11,7 @@ public abstract class IMethod extends Entity {
 
     public IMethod(String name, String line, int row, int column) {
         super(name, line, row, column);
+        abstractSyntaxTree = new CodeBlockNode(line, row, column);
     }
 
     public CodeBlockNode getAbstractSyntaxTree() {

@@ -36,7 +36,10 @@ public class CodeBlockNode extends SentenceNode {
                 SymbolTable.getInstance().saveException(e);
             }
         }
-        removeDeclarations();
+
+        if (SymbolTable.getInstance().getCurrMethod().getAbstractSyntaxTree() != this) {
+            removeDeclarations();
+        }
     }
 
     private void removeDeclarations() {

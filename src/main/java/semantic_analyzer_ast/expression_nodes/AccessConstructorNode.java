@@ -1,11 +1,11 @@
 package semantic_analyzer_ast.expression_nodes;
 
 import exceptions.SemanticException;
-import semantic_analyzer.IType;
-import semantic_analyzer.SymbolTable;
+import semantic_analyzer.*;
 import semantic_analyzer_ast.visitors.VisitorExpression;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class AccessConstructorNode extends AccessNode {
@@ -18,8 +18,18 @@ public class AccessConstructorNode extends AccessNode {
     }
 
     @Override
-    public IType getType() {
-        return SymbolTable.getInstance().getClass(getToken().getLexeme()).getConstructor().getReturnType();
+    public IType getCurrentType() throws SemanticException {
+        return getConstructor().getReturnType();
+    }
+
+    @Override
+    public IType getType() throws SemanticException {
+        validate();
+        if (getChainedNode() == null) {
+            return getCurrentType();
+        } else {
+            return getChainedNode().getType(getCurrentType());
+        }
     }
 
     @Override
@@ -32,13 +42,43 @@ public class AccessConstructorNode extends AccessNode {
     }
 
     @Override
-    public void validateForAssignment() throws SemanticException {
-        throw new SemanticException(this, "asignacion a un constructor");
+    public void validate() throws SemanticException {
+        IType type = getCurrentType();
+        validateParameters(getConstructor());
+        if (getChainedNode() != null) {
+            getChainedNode().validate(type);
+        }
     }
 
-    @Override
-    public void validate() throws SemanticException {
 
+    private void validateParameters(IMethod method) throws SemanticException {
+        if (actualParameters.size() != method.getParameterList().size()) {
+            throw new SemanticException(this, "distinto numero de parametros");
+        }
+
+        Iterator<ExpressionNode> expressionNodeIterator = actualParameters.iterator();
+        Iterator<IParameter> parameterIterator = method.getParameterList().iterator();
+
+        ExpressionNode expressionNode;
+        IType actualType, parameterType;
+        while (expressionNodeIterator.hasNext() && parameterIterator.hasNext()) {
+            expressionNode = expressionNodeIterator.next();
+            actualType = expressionNode.getType();
+            parameterType = parameterIterator.next().getType();
+
+            if (!actualType.acceptTypeChecker(parameterType.getTypeChecker())) {
+                throw new SemanticException(expressionNode, "tipo de parametro diferente");
+            }
+        }
+    }
+
+    private IMethod getConstructor() throws SemanticException {
+        IClass iClass = SymbolTable.getInstance().getClass(getToken().getLexeme());
+        if (iClass == null) {
+            throw new SemanticException(this, "clase no definida");
+        }
+
+        return iClass.getConstructor();
     }
 
     public GenericityNode getGenericityNode() {
@@ -52,6 +92,4 @@ public class AccessConstructorNode extends AccessNode {
     public List<ExpressionNode> getActualParameters() {
         return actualParameters;
     }
-
-
 }
