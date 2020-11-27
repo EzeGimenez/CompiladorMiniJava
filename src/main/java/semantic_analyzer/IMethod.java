@@ -62,7 +62,7 @@ public abstract class IMethod extends Entity {
         }
         for (int i = 0; i < getParameterList().size(); i++) {
             try {
-                getParameterList().get(i).validateOverwrite(ancestorClassRef, ancestorParameters.get(0));
+                getParameterList().get(i).validateOverwrite(ancestorClassRef, ancestorParameters.get(i));
             } catch (SemanticException e) {
                 throw new SemanticException(e.getEntity(),
                         "diferente tipo de parametro que metodo ancestro se esperaba " +

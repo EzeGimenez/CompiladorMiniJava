@@ -177,7 +177,7 @@ public class SymbolTable implements ISymbolTable {
     }
 
     @Override
-    public void declarationCheck() {
+    public boolean declarationCheck() {
         for (IInterface i : interfaceMap.values()) {
             try {
                 i.declarationCheck();
@@ -196,6 +196,7 @@ public class SymbolTable implements ISymbolTable {
             IClass c = new Class("");
             saveException(new SemanticException(c, "debe incluirse un metodo estatico main sin tipo de retorno ni parametros"));
         }
+        return semanticExceptionList.size() == 0;
     }
 
     @Override

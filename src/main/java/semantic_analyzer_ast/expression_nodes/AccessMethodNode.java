@@ -75,9 +75,16 @@ public class AccessMethodNode extends AccessNode {
                 if (out == null) out = classType.getInheritedMethodMap().get((getToken().getLexeme()));
                 return out;
             }
-
         } else {
-            throw new SemanticException(this, "clase no encontrada");
+            IInterface iInterface = SymbolTable.getInstance().getInterface(getToken().getLexeme());
+            if (iInterface != null) {
+                if (!iInterface.containsMethod(getToken().getLexeme())) {
+                    throw new SemanticException(this, "no se encontro un metodo con nombre " + getToken().getLexeme());
+                } else {
+                    return iInterface.getMethodMap().get(getToken().getLexeme());
+                }
+            }
+            throw new SemanticException(this, "no se encontró la clase/interfaz, o es un acceso invalido");
         }
     }
 

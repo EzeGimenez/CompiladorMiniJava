@@ -17,7 +17,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 @RunWith(Parameterized.class)
 public class ModuloPrincipalSemanticASTTest {
 
-    private static final String ABS_PATH = "C:\\D_Drive\\Eze\\UNS\\4.2 CUARENTENA 2.0\\Compiladores e Interpretes\\etapa 4\\casos de Prueba\\Incorrectos";
+    private static final String ABS_PATH = "C:\\D_Drive\\Eze\\UNS\\4.2 CUARENTENA 2.0\\Compiladores e Interpretes\\etapa 4\\casos de Prueba\\Correctos";
 
     @Parameterized.Parameter
     public String fileName;

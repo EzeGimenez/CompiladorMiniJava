@@ -706,7 +706,7 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
             match(SEMICOLON);
         } else if (equalsAny(STATIC)) {
             match(STATIC);
-            AccessStaticNode staticAccessNode = new AccessStaticNode(fileHandler.getCurrentLine(), fileHandler.getRow(), formaMetodo().getColumn());
+            AccessStaticNode staticAccessNode = new AccessStaticNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             String classTypeName = currToken.getLexeme();
             IClassType classType = new TypeClass(classTypeName, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
             staticAccessNode.setClassType(classType);
@@ -1086,7 +1086,6 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }
         return out;
     }
-
 
     private ExpressionBinaryNode op4() throws SyntaxException {
         ExpressionBinaryNode out = new ExpressionBinaryBetweenIntegers(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());

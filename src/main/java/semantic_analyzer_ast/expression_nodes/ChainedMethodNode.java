@@ -87,7 +87,15 @@ public class ChainedMethodNode extends ChainedNode {
                 return out;
             }
         } else {
-            throw new SemanticException(this, "acceso invalido");
+            IInterface iInterface = SymbolTable.getInstance().getInterface(prevType.getName());
+            if (iInterface != null) {
+                if (!iInterface.containsMethod(getToken().getLexeme())) {
+                    throw new SemanticException(this, "no se encontro un metodo con nombre " + getToken().getLexeme());
+                } else {
+                    return iInterface.getMethodMap().get(getToken().getLexeme());
+                }
+            }
+            throw new SemanticException(this, "no se encontró la clase/interfaz, o es un acceso invalido");
         }
     }
 

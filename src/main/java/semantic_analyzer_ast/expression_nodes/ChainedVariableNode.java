@@ -37,7 +37,6 @@ public class ChainedVariableNode extends ChainedNode {
         }
     }
 
-
     @Override
     public void validate(IType prevType) throws SemanticException {
         IVariable attribute = getAttribute(prevType);

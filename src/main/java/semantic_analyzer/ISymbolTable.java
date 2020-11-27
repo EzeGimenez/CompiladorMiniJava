@@ -34,7 +34,7 @@ public interface ISymbolTable {
 
     IInterface getInterface(String name);
 
-    void declarationCheck();
+    boolean declarationCheck();
 
     void sentencesCheck();
 
