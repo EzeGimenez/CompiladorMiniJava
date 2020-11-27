@@ -1,6 +1,7 @@
 package semantic_analyzer;
 
 import exceptions.SemanticException;
+import semantic_analyzer_ast.sentence_nodes.AssignmentNode;
 
 import java.util.Collection;
 import java.util.Map;
@@ -50,4 +51,6 @@ public abstract class IClass extends Entity {
     public abstract void declarationCheck() throws SemanticException;
 
     public abstract void sentencesCheck() throws SemanticException;
+
+    public abstract void addAttributeAssignment(AssignmentNode assignmentNode);
 }

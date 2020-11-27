@@ -114,6 +114,6 @@ public class AccessVariableNode extends AccessNode {
 
     private boolean isStaticMethod() {
         IAccessMode accessMode = SymbolTable.getInstance().getCurrMethod().getAccessMode();
-        return accessMode.getName().equals("static");
+        return accessMode != null && accessMode.getName().equals("static");
     }
 }

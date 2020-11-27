@@ -1,11 +1,9 @@
 package semantic_analyzer;
 
 import exceptions.SemanticException;
+import semantic_analyzer_ast.sentence_nodes.AssignmentNode;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Class extends IClass {
 
@@ -16,6 +14,7 @@ public class Class extends IClass {
     private IMethod constructor;
     private IType genericType;
     private boolean didConsolidate;
+    private final List<AssignmentNode> attributeAssignmentList;
 
 
     public Class(String name) {
@@ -29,6 +28,7 @@ public class Class extends IClass {
         methodMap = new HashMap<>();
         inheritedMethodMap = new HashMap<>();
         interfaceInheritanceList = new ArrayList<>();
+        attributeAssignmentList = new ArrayList<>();
         didConsolidate = false;
     }
 
@@ -173,6 +173,7 @@ public class Class extends IClass {
             try {
                 SymbolTable.getInstance().setCurrMethod(constructor);
                 constructor.sentencesCheck();
+                attributeAssignmentCheck();
             } catch (SemanticException e) {
                 SymbolTable.getInstance().saveException(e);
             }
@@ -183,6 +184,18 @@ public class Class extends IClass {
                 } catch (SemanticException e) {
                     SymbolTable.getInstance().saveException(e);
                 }
+            }
+
+        }
+    }
+
+    private void attributeAssignmentCheck() {
+
+        for (AssignmentNode a : attributeAssignmentList) {
+            try {
+                a.validate();
+            } catch (SemanticException e) {
+                SymbolTable.getInstance().saveException(e);
             }
         }
     }
@@ -357,6 +370,11 @@ public class Class extends IClass {
         for (IVariable v : attributeMap.values()) {
             v.validate(genericType);
         }
+    }
+
+    @Override
+    public void addAttributeAssignment(AssignmentNode assignmentNode) {
+        attributeAssignmentList.add(assignmentNode);
     }
 
 }

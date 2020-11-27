@@ -465,8 +465,11 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         String attributeName = currToken.getLexeme();
         IVariable attribute = new Variable(attributeName, accessMode, visibility, type, fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
 
+        DeclarationNode declarationNode = new DeclarationNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+        declarationNode.setType(type);
+        declarationNode.setToken(currToken);
         match(ID_MET_VAR);
-        asignacionAttrAux(visibility, accessMode, type);
+        asignacionAttrAux(declarationNode, visibility, accessMode, type);
 
         if (!ST.getCurrClass().containsAttribute(attributeName)) {
             ST.getCurrClass().addAttribute(attribute);
@@ -475,10 +478,16 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         }
     }
 
-    private void asignacionAttrAux(IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
+    private void asignacionAttrAux(DeclarationNode declarationNode, IVisibility visibility, IAccessMode accessMode, IType type) throws SyntaxException, LexicalException, SemanticException {
         if (equalsAny(ASSIGN)) {
+            AccessVariableNode accessNode = new AccessVariableNode(declarationNode.getLine(), declarationNode.getRow(), declarationNode.getColumn());
+            accessNode.setToken(declarationNode.getToken());
+            AssignmentNode assignmentNode = new AssignmentNode(fileHandler.getCurrentLine(), fileHandler.getRow(), fileHandler.getColumn());
+            assignmentNode.setLeftSide(accessNode);
+            assignmentNode.setToken(currToken);
             match(ASSIGN);
-            expresion(); //TODO assign to atribute this
+            assignmentNode.setRightSide(expresion());
+            SymbolTable.getInstance().getCurrClass().addAttributeAssignment(assignmentNode);
         }
         listaAsignacion(visibility, accessMode, type);
     }
