@@ -8,10 +8,21 @@ import java.util.List;
 public abstract class IMethod extends Entity {
 
     private CodeBlockNode abstractSyntaxTree;
+    private int offset;
+    private String tag;
 
     public IMethod(String name, String line, int row, int column) {
         super(name, line, row, column);
         abstractSyntaxTree = new CodeBlockNode(line, row, column);
+        offset = -1;
+    }
+
+    public int getOffset() {
+        return offset;
+    }
+
+    public void setOffset(int offset) {
+        this.offset = offset;
     }
 
     public CodeBlockNode getAbstractSyntaxTree() {
@@ -30,6 +41,14 @@ public abstract class IMethod extends Entity {
 
     public abstract IAccessMode getAccessMode();
 
+    public String getTag() {
+        return tag;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
+
     @Override
     public void compareTo(Object o) {
 
@@ -42,7 +61,13 @@ public abstract class IMethod extends Entity {
     public void validate(IType genericType) throws SemanticException {
         if (getReturnType() != null) getReturnType().validate(genericType);
 
+        int offset = getParameterList().size() + 3;
         for (IParameter p : getParameterList()) {
+            if (getAccessMode().getName().equals("static")) {
+                p.setOffset(offset-- - 1);
+            } else {
+                p.setOffset(offset--);
+            }
             p.getType().validate(genericType);
         }
     }
@@ -79,4 +104,6 @@ public abstract class IMethod extends Entity {
     public void sentencesCheck() throws SemanticException {
         abstractSyntaxTree.validate();
     }
+
+    public abstract void generateCode();
 }

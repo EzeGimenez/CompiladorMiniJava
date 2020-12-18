@@ -12,6 +12,10 @@ public class VisitorDeclarationFinder implements VisitorSentence {
         this.name = name;
     }
 
+    public DeclarationNode getDeclarationNodeFound() {
+        return declarationNodeFound;
+    }
+
     @Override
     public void visit(AssignmentNode node) {
 
@@ -22,10 +26,6 @@ public class VisitorDeclarationFinder implements VisitorSentence {
         if (node.getToken().getLexeme().equals(name)) {
             declarationNodeFound = node;
         }
-    }
-
-    public DeclarationNode getDeclarationNodeFound() {
-        return declarationNodeFound;
     }
 
     @Override

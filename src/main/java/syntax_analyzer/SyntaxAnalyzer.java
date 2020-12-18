@@ -906,12 +906,16 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private ExpressionBinaryNode orAux() throws SyntaxException, LexicalException {
         if (equalsAny(OP_OR)) {
             ExpressionBinaryNode expressionBinaryNode = op1();
-            expressionBinaryNode.setRightSide(and());
+
+            ExpressionNode leftSide = and();
             ExpressionBinaryNode expressionNode = orAux();
+
             if (expressionNode != null) {
-                expressionNode.setLeftSide(expressionBinaryNode);
-                return expressionNode;
+                expressionNode.setLeftSide(leftSide);
+                expressionBinaryNode.setRightSide(expressionNode);
+                return expressionBinaryNode;
             }
+            expressionBinaryNode.setRightSide(leftSide);
             return expressionBinaryNode;
         } else if (!equalsAny(PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildSyntaxException("|| ) , ;");
@@ -933,14 +937,16 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
     private ExpressionBinaryNode andAux() throws SyntaxException, LexicalException {
         if (equalsAny(OP_AND)) {
             ExpressionBinaryNode expressionBinaryNode = op2();
-            expressionBinaryNode.setToken(currToken);
 
-            expressionBinaryNode.setRightSide(equalsExp());
+            ExpressionNode leftSide = equalsExp();
             ExpressionBinaryNode expressionNode = andAux();
+
             if (expressionNode != null) {
-                expressionNode.setLeftSide(expressionBinaryNode);
-                return expressionNode;
+                expressionNode.setLeftSide(leftSide);
+                expressionBinaryNode.setRightSide(expressionNode);
+                return expressionBinaryNode;
             }
+            expressionBinaryNode.setRightSide(leftSide);
             return expressionBinaryNode;
         } else if (!equalsAny(OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildSyntaxException("&& || ) , ;");
@@ -963,12 +969,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(EQUALS, NOT_EQUALS)) {
             ExpressionBinaryNode expressionBinaryNode = op3();
 
-            expressionBinaryNode.setRightSide(inEq());
+            ExpressionNode leftSide = inEq();
             ExpressionBinaryNode expressionNode = equalsAux();
+
             if (expressionNode != null) {
-                expressionNode.setLeftSide(expressionBinaryNode);
-                return expressionNode;
+                expressionNode.setLeftSide(leftSide);
+                expressionBinaryNode.setRightSide(expressionNode);
+                return expressionBinaryNode;
             }
+            expressionBinaryNode.setRightSide(leftSide);
             return expressionBinaryNode;
         } else if (!equalsAny(OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildSyntaxException("== != && || ) , ;");
@@ -991,12 +1000,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS)) {
             ExpressionBinaryNode expressionBinaryNode = op4();
 
-            expressionBinaryNode.setRightSide(add());
+            ExpressionNode leftSide = add();
             ExpressionBinaryNode expressionNode = inEqAux();
+
             if (expressionNode != null) {
-                expressionNode.setLeftSide(expressionBinaryNode);
-                return expressionNode;
+                expressionNode.setLeftSide(leftSide);
+                expressionBinaryNode.setRightSide(expressionNode);
+                return expressionBinaryNode;
             }
+            expressionBinaryNode.setRightSide(leftSide);
             return expressionBinaryNode;
         } else if (!equalsAny(EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildSyntaxException("operador binario");
@@ -1019,12 +1031,16 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(ADD, SUB)) {
             ExpressionBinaryNode expressionBinaryNode = op5();
 
-            expressionBinaryNode.setRightSide(mult());
+            ExpressionNode leftSide = mult();
             ExpressionBinaryNode expressionNode = addAux();
+
             if (expressionNode != null) {
-                expressionNode.setLeftSide(expressionBinaryNode);
-                return expressionNode;
+                expressionNode.setLeftSide(leftSide);
+                expressionBinaryNode.setRightSide(expressionNode);
+                return expressionBinaryNode;
             }
+
+            expressionBinaryNode.setRightSide(leftSide);
             return expressionBinaryNode;
         } else if (!equalsAny(LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildSyntaxException("|| ) , ;");
@@ -1047,12 +1063,15 @@ public class SyntaxAnalyzer implements ISyntaxAnalyzer {
         if (equalsAny(MULTIPLY, DIVIDE, REMAINDER)) {
             ExpressionBinaryNode expressionBinaryNode = op6();
 
-            expressionBinaryNode.setRightSide(expresionUnaria());
+            ExpressionNode leftSide = expresionUnaria();
             ExpressionBinaryNode expressionNode = multAux();
+
             if (expressionNode != null) {
-                expressionNode.setLeftSide(expressionBinaryNode);
-                return expressionNode;
+                expressionNode.setLeftSide(leftSide);
+                expressionBinaryNode.setRightSide(expressionNode);
+                return expressionBinaryNode;
             }
+            expressionBinaryNode.setRightSide(leftSide);
             return expressionBinaryNode;
         } else if (!equalsAny(ADD, SUB, LESS_THAN, GREATER_THAN, LESS_EQUALS, GREATER_EQUALS, EQUALS, NOT_EQUALS, OP_AND, OP_OR, PARENTHESES_CLOSE, COMMA, SEMICOLON)) {
             throw buildSyntaxException("multiplicacion, suma, in/ecuacion, operador booleano ) , ;");

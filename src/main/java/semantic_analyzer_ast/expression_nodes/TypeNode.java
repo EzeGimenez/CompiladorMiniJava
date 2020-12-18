@@ -11,5 +11,4 @@ public abstract class TypeNode extends OperandNode {
     public void validate() throws SemanticException {
 
     }
-
 }

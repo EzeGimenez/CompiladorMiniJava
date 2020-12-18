@@ -1,10 +1,15 @@
 package semantic_analyzer_ast.expression_nodes;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer.*;
 import semantic_analyzer_ast.visitors.VisitorExpression;
 
 public class ChainedVariableNode extends ChainedNode {
+
+    private boolean isLeftSide = false;
+    private IVariable referencedVariable;
 
     public ChainedVariableNode(String line, int row, int column) {
         super(line, row, column);
@@ -39,9 +44,9 @@ public class ChainedVariableNode extends ChainedNode {
 
     @Override
     public void validate(IType prevType) throws SemanticException {
-        IVariable attribute = getAttribute(prevType);
-        visibilityCheck(attribute);
-        if (isStaticMethod() && attribute.getAccessMode() == null) {
+        referencedVariable = getAttribute(prevType);
+        visibilityCheck(referencedVariable);
+        if (isStaticAttribute() && referencedVariable.getAccessMode() == null) {
             throw new SemanticException(this, "acceso a variable dinamica dentro de metodo estatico");
         }
         if (getChainedNode() != null) {
@@ -56,13 +61,16 @@ public class ChainedVariableNode extends ChainedNode {
         }
     }
 
-    private boolean isStaticMethod() {
+    private boolean isStaticAttribute() {
         IAccessMode accessMode = SymbolTable.getInstance().getCurrMethod().getAccessMode();
-        return accessMode.getName().equals("static");
+        return accessMode != null && accessMode.getName().equals("static");
     }
 
     @Override
     public IType getType(IType prevType) throws SemanticException {
+        if (referencedVariable == null) {
+            referencedVariable = getAttribute(prevType);
+        }
         if (getChainedNode() != null) {
             return getChainedNode().getType(getAttribute(prevType).getType());
         }
@@ -74,6 +82,21 @@ public class ChainedVariableNode extends ChainedNode {
         validate(prevType);
         if (!getAttribute(prevType).getAccessMode().getName().equals("static")) {
             throw new SemanticException(this, "intento de acceso a metodo dinamico de manera estatica");
+        }
+    }
+
+    public void setIsLeftSide() {
+        isLeftSide = true;
+    }
+
+    @Override
+    public void generateCode() {
+        IInstructionWriter writer = InstructionWriter.getInstance();
+        if (!isLeftSide || getChainedNode() != null) {
+            writer.write("loadref", referencedVariable.getOffset());
+        } else {
+            writer.write("swap");
+            writer.write("storeref", referencedVariable.getOffset());
         }
     }
 }

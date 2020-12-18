@@ -1,5 +1,6 @@
 package semantic_analyzer_ast.sentence_nodes;
 
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer_ast.visitors.VisitorEndsInReturn;
 import semantic_analyzer_ast.visitors.VisitorSentence;
@@ -7,9 +8,16 @@ import semantic_analyzer_ast.visitors.VisitorSentence;
 public class ElseNode extends SentenceNode {
 
     private SentenceNode sentenceNode;
+    private String exitTag;
 
     public ElseNode(String line, int row, int column) {
         super(line, row, column);
+    }
+
+    @Override
+    public void generateCode() {
+        sentenceNode.generateCode();
+        InstructionWriter.getInstance().write("jump", exitTag);
     }
 
     public SentenceNode getSentenceNode() {
@@ -38,5 +46,9 @@ public class ElseNode extends SentenceNode {
         sentenceNode.acceptVisitor(visitorEndsInReturn);
 
         return visitorEndsInReturn.endsInReturn();
+    }
+
+    public void setExitTag(String exitTag) {
+        this.exitTag = exitTag;
     }
 }

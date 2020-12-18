@@ -1,13 +1,15 @@
 public class Main {
 
     public static void main(String[] args) {
-        if (args.length == 1) {
+        if (args.length == 2) {
             String fileName = args[0];
-            new ModuloPrincipalSemantic(fileName);
-        } else if (args.length == 2) {
-            if (args[1].equals("-b")) {
+            String fileNameOut = args[1];
+            new ModuloPrincipalCeIVM(fileName, fileNameOut);
+        } else if (args.length == 3) {
+            if (args[2].equals("-b")) {
                 String fileName = args[0];
-                new ModuloPrincipalSemanticBeautified(fileName);
+                String fileNameOut = args[1];
+                new ModuloPrincipalCeIVM(fileName, fileNameOut);
             } else {
                 System.out.println(args[1] + " no reconocido");
             }

@@ -1,5 +1,8 @@
 package semantic_analyzer_ast.sentence_nodes;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
+import ceivm.TagProvider;
 import exceptions.SemanticException;
 import semantic_analyzer_ast.expression_nodes.ExpressionNode;
 import semantic_analyzer_ast.visitors.VisitorIsBoolean;
@@ -11,6 +14,20 @@ public class WhileNode extends SentenceNode {
 
     public WhileNode(String line, int row, int column) {
         super(line, row, column);
+    }
+
+    @Override
+    public void generateCode() {
+        IInstructionWriter writer = InstructionWriter.getInstance();
+        String whileTag = TagProvider.getWhileTag();
+        String whileExitTag = TagProvider.getWhileExitTag();
+        writer.addTag(whileTag);
+        condition.generateCode();
+        writer.write("bf", whileExitTag);
+        body.generateCode();
+        writer.write("jump", whileTag);
+        writer.addTag(whileExitTag);
+        writer.write("nop");
     }
 
     public SentenceNode getBody() {

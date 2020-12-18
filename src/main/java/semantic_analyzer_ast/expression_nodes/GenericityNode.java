@@ -7,6 +7,11 @@ public class GenericityNode extends Node {
         super(line, row, column);
     }
 
+    @Override
+    public void generateCode() {
+
+    }
+
     public GenericityNode getGenericityNode() {
         return genericityNode;
     }

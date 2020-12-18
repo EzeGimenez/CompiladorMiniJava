@@ -22,12 +22,14 @@ public class Parameter extends IParameter {
 
     @Override
     public IParameter cloneForOverWrite(String line, int row, int column) {
-        return new Parameter(
+        IParameter out = new Parameter(
                 getName(),
                 type.cloneForOverwrite(line, row, column),
                 line,
                 row,
                 column);
+        out.setOffset(getOffset());
+        return out;
     }
 
     @Override

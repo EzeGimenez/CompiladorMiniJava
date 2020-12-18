@@ -1,5 +1,8 @@
 package semantic_analyzer;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
+import ceivm.TagProvider;
 import exceptions.SemanticException;
 import semantic_analyzer_ast.sentence_nodes.AssignmentNode;
 
@@ -8,14 +11,13 @@ import java.util.*;
 public class Class extends IClass {
 
     private final Collection<IClassType> interfaceInheritanceList;
-    private final Map<String, IVariable> attributeMap, inheritedAttributes;
+    private final Map<String, IVariable> attributeMap, inheritedAttributeMap;
     private final Map<String, IMethod> methodMap, inheritedMethodMap;
+    private final List<AssignmentNode> attributeAssignmentList;
     private IClassType parentClassRef;
     private IMethod constructor;
     private IType genericType;
     private boolean didConsolidate;
-    private final List<AssignmentNode> attributeAssignmentList;
-
 
     public Class(String name) {
         this(name, "", 0, 0);
@@ -24,7 +26,7 @@ public class Class extends IClass {
     public Class(String name, String line, int row, int column) {
         super(name, line, row, column);
         attributeMap = new HashMap<>();
-        inheritedAttributes = new HashMap<>();
+        inheritedAttributeMap = new HashMap<>();
         methodMap = new HashMap<>();
         inheritedMethodMap = new HashMap<>();
         interfaceInheritanceList = new ArrayList<>();
@@ -39,7 +41,7 @@ public class Class extends IClass {
 
     @Override
     public Map<String, IVariable> getInheritedAttributeMap() {
-        return inheritedAttributes;
+        return inheritedAttributeMap;
     }
 
     @Override
@@ -104,7 +106,7 @@ public class Class extends IClass {
 
     @Override
     public boolean containsAttribute(String name) {
-        return attributeMap.containsKey(name) || inheritedAttributes.containsKey(name);
+        return attributeMap.containsKey(name) || inheritedAttributeMap.containsKey(name);
     }
 
     @Override
@@ -164,39 +166,6 @@ public class Class extends IClass {
 
             validateMethods();
             validateAttributes();
-        }
-    }
-
-    @Override
-    public void sentencesCheck() {
-        if (!getName().equals("Object") && !getName().equals("System")) {
-            try {
-                SymbolTable.getInstance().setCurrMethod(constructor);
-                constructor.sentencesCheck();
-                attributeAssignmentCheck();
-            } catch (SemanticException e) {
-                SymbolTable.getInstance().saveException(e);
-            }
-            for (IMethod m : methodMap.values()) {
-                try {
-                    SymbolTable.getInstance().setCurrMethod(m);
-                    m.sentencesCheck();
-                } catch (SemanticException e) {
-                    SymbolTable.getInstance().saveException(e);
-                }
-            }
-
-        }
-    }
-
-    private void attributeAssignmentCheck() {
-
-        for (AssignmentNode a : attributeAssignmentList) {
-            try {
-                a.validate();
-            } catch (SemanticException e) {
-                SymbolTable.getInstance().saveException(e);
-            }
         }
     }
 
@@ -279,6 +248,8 @@ public class Class extends IClass {
                 methodWithSameName = methodWithSameName == null ? inheritedMethodMap.get(inheritedMethod.getName()) : methodWithSameName;
                 if (methodWithSameName != null) {
                     methodWithSameName.validateOverwrite(parentClassRef, inheritedMethod);
+                    methodWithSameName.setTag(TagProvider.getMethodTag(getName(), methodWithSameName.getName()));
+                    methodWithSameName.setOffset(inheritedMethod.getOffset());
                 } else {
                     int columnFix = getColumn() + inheritedMethod.getName().length() + getName().length();
                     inheritedMethodMap.put(
@@ -292,6 +263,8 @@ public class Class extends IClass {
             methodWithSameName = methodMap.get(inheritedMethod.getName());
             methodWithSameName = methodWithSameName == null ? inheritedMethodMap.get(inheritedMethod.getName()) : methodWithSameName;
             if (methodWithSameName != null) {
+                methodWithSameName.setOffset(inheritedMethod.getOffset());
+                methodWithSameName.setTag(TagProvider.getMethodTag(getName(), methodWithSameName.getName()));
                 methodWithSameName.validateOverwrite(parentClassRef, inheritedMethod);
             } else {
                 int columnFix = getColumn() + inheritedMethod.getName().length() + getName().length();
@@ -340,26 +313,51 @@ public class Class extends IClass {
     private void addInheritedAttributesFromParentClass() {
         if (parentClassRef != null) {
             IClass parentClass = SymbolTable.getInstance().getClass(parentClassRef.getName());
+
             for (IVariable v : parentClass.getAttributeMap().values()) {
+
+                IVariable attrWithSameName = attributeMap.get(v.getName());
+                if (attrWithSameName != null) {
+                    attrWithSameName.setOffset(v.getOffset());
+                }
+
                 IVariable vClone = v.cloneForOverwrite(parentClassRef);
-                inheritedAttributes.put(v.getName(), vClone);
+                inheritedAttributeMap.put(v.getName(), vClone);
             }
             for (IVariable v : parentClass.getInheritedAttributeMap().values()) {
+
+                IVariable attrWithSameName = attributeMap.get(v.getName());
+                attrWithSameName = attrWithSameName == null ? inheritedAttributeMap.get(v.getName()) : attrWithSameName;
+                if (attrWithSameName != null) {
+                    attrWithSameName.setOffset(v.getOffset());
+                }
+
                 IVariable vClone = v.cloneForOverwrite(parentClassRef);
-                inheritedAttributes.put(v.getName(), vClone);
+                inheritedAttributeMap.put(v.getName(), vClone);
             }
         }
     }
 
     private void validateMethods() {
+        int offset = inheritedMethodMap.size();
         for (IMethod m : methodMap.values()) {
             try {
+                if (m.getOffset() == -1) {
+                    m.setOffset(offset++);
+
+                    if (m.getName().equals("main")) {
+                        m.setTag("main");
+                    } else {
+                        m.setTag(TagProvider.getMethodTag(getName(), m.getName()));
+                    }
+                }
                 m.validate(genericType);
             } catch (SemanticException e) {
                 SymbolTable.getInstance().saveException(e);
             }
         }
         try {
+            constructor.setTag(TagProvider.getConstructorTag(getName()));
             constructor.validate(genericType);
         } catch (SemanticException e) {
             SymbolTable.getInstance().saveException(e);
@@ -367,7 +365,11 @@ public class Class extends IClass {
     }
 
     private void validateAttributes() throws SemanticException {
+        int offset = inheritedAttributeMap.size() + 1;
         for (IVariable v : attributeMap.values()) {
+            if (v.getOffset() == -1) {
+                v.setOffset(offset++);
+            }
             v.validate(genericType);
         }
     }
@@ -377,4 +379,89 @@ public class Class extends IClass {
         attributeAssignmentList.add(assignmentNode);
     }
 
+    @Override
+    public void sentencesCheck() {
+        if (!getName().equals("Object") && !getName().equals("System")) {
+            try {
+                SymbolTable.getInstance().setCurrMethod(constructor);
+                constructor.sentencesCheck();
+                attributeAssignmentCheck();
+            } catch (SemanticException e) {
+                SymbolTable.getInstance().saveException(e);
+            }
+            for (IMethod m : methodMap.values()) {
+                try {
+                    SymbolTable.getInstance().setCurrMethod(m);
+                    m.sentencesCheck();
+                } catch (SemanticException e) {
+                    SymbolTable.getInstance().saveException(e);
+                }
+            }
+        }
+    }
+
+    private void attributeAssignmentCheck() {
+        for (AssignmentNode a : attributeAssignmentList) {
+            try {
+                a.validate();
+            } catch (SemanticException e) {
+                SymbolTable.getInstance().saveException(e);
+            }
+        }
+    }
+
+    @Override
+    public void generateCode() {
+        IInstructionWriter writer = InstructionWriter.getInstance();
+        writer.changeToCodeSection();
+
+        SymbolTable.getInstance().setCurrMethod(constructor);
+        writer.addTag(constructor.getTag());
+        constructor.generateCode();
+
+        for (IMethod m : methodMap.values()) {
+            SymbolTable.getInstance().setCurrMethod(m);
+            writer.addTag(m.getTag());
+            m.generateCode();
+        }
+    }
+
+    @Override
+    protected void generateVT() {
+        IInstructionWriter writer = InstructionWriter.getInstance();
+
+        List<IMethod> allMethodList = new ArrayList<>(inheritedMethodMap.values());
+        allMethodList.addAll(methodMap.values());
+        allMethodList.sort(new OffsetComparator());
+
+        writer.addTag(TagProvider.getVtTag(getName()));
+
+        StringBuilder tagBuilder = new StringBuilder();
+        if (allMethodList.size() > 0) {
+            for (IMethod m : allMethodList) {
+                if (m.getAccessMode().getName().equals("dynamic") && !m.getName().equals("main")) {
+                    tagBuilder
+                            .append(m.getTag())
+                            .append(", ");
+                }
+            }
+            if (tagBuilder.length() > 0) {
+                tagBuilder.delete(tagBuilder.length() - 2, tagBuilder.length());
+                writer.write("DW", tagBuilder.toString());
+            } else {
+                writer.write("NOP");
+            }
+        } else {
+            writer.write("NOP");
+        }
+
+    }
+
+    private static class OffsetComparator implements Comparator<IMethod> {
+
+        @Override
+        public int compare(IMethod o1, IMethod o2) {
+            return o1.getOffset() - o2.getOffset();
+        }
+    }
 }

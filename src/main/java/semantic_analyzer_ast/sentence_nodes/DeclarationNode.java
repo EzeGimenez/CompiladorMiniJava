@@ -1,5 +1,7 @@
 package semantic_analyzer_ast.sentence_nodes;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer.IParameter;
 import semantic_analyzer.IType;
@@ -37,7 +39,7 @@ public class DeclarationNode extends SentenceNode {
     }
 
     private void typeCheck() throws SemanticException {
-        getType().validate(null); //TODO falta tipo generico
+        getType().validate(null);
     }
 
     @Override
@@ -80,5 +82,23 @@ public class DeclarationNode extends SentenceNode {
                 throw new SemanticException(this, "nombre de variable duplicado");
             }
         }
+    }
+
+    @Override
+    public void generateCode() {
+        CodeBlockNode currAST = SymbolTable.getInstance().getCurrAST();
+        currAST.setDeclarationsCount(currAST.getDeclarationsCount() + 1);
+
+        if (SymbolTable.getInstance().getCurrMethod().getAbstractSyntaxTree() !=
+                SymbolTable.getInstance().getCurrAST()) {
+            CodeBlockNode mainAST = SymbolTable
+                    .getInstance()
+                    .getCurrMethod()
+                    .getAbstractSyntaxTree();
+
+            mainAST.setDeclarationsCount(mainAST.getDeclarationsCount() + 1);
+        }
+        IInstructionWriter writer = InstructionWriter.getInstance();
+        writer.write("rmem", 1);
     }
 }

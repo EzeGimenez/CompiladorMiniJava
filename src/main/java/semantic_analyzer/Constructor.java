@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer_ast.sentence_nodes.SentenceNode;
 import semantic_analyzer_ast.visitors.VisitorEndsInReturn;
@@ -39,8 +41,10 @@ public class Constructor extends IMethod {
     }
 
     public void validate(IType genericType) throws SemanticException {
+        int offset = getParameterList().size() + 3;
         for (IParameter p : getParameterList()) {
             p.getType().validate(genericType);
+            p.setOffset(offset--);
         }
     }
 
@@ -107,6 +111,18 @@ public class Constructor extends IMethod {
                 currSentence = null;
             }
         }
+    }
 
+    @Override
+    public void generateCode() {
+        IInstructionWriter writer = InstructionWriter.getInstance();
+        writer.write("loadfp");
+        writer.write("loadsp");
+        writer.write("storefp");
+
+        getAbstractSyntaxTree().generateCode();
+
+        writer.write("storefp");
+        writer.write("ret", parameterList.size() + 1);
     }
 }

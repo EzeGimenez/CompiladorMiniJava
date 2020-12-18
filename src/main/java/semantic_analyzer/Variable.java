@@ -42,7 +42,9 @@ public class Variable extends IVariable {
         if (getType().equals(parentClass.getGenericType())) {
             outType = parentClassRef.getGenericType();
         }
-        return new Variable(getName(), accessMode, getVisibility(), outType, getLine(), getRow(), getColumn());
+        IVariable out = new Variable(getName(), accessMode, getVisibility(), outType, getLine(), getRow(), getColumn());
+        out.setOffset(getOffset());
+        return out;
     }
 
     @Override

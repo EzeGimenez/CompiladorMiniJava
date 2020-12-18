@@ -1,5 +1,6 @@
 package semantic_analyzer_ast.sentence_nodes;
 
+import ceivm.VisitorAssignmentCode;
 import exceptions.SemanticException;
 import lexical_analyzer.TokenDescriptor;
 import semantic_analyzer.IType;
@@ -57,7 +58,14 @@ public class AssignmentNode extends SentenceNode {
                 throw new SemanticException(this, "+= o -= con tipo distinto a entero");
             }
         }
-
     }
 
+    @Override
+    public void generateCode() {
+        rightSide.generateCode();
+
+        VisitorAssignmentCode visitor = new VisitorAssignmentCode();
+        leftSide.acceptVisitor(visitor);
+        leftSide.generateCode();
+    }
 }

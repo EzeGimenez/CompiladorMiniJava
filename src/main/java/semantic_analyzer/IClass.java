@@ -53,4 +53,8 @@ public abstract class IClass extends Entity {
     public abstract void sentencesCheck() throws SemanticException;
 
     public abstract void addAttributeAssignment(AssignmentNode assignmentNode);
+
+    public abstract void generateCode();
+
+    protected abstract void generateVT();
 }

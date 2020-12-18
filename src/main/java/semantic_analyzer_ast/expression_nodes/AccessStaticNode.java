@@ -53,4 +53,8 @@ public class AccessStaticNode extends AccessNode {
         getChainedNode().validateStatic(getCurrentType());
     }
 
+    @Override
+    public void generateCode() {
+        getChainedNode().generateCode();
+    }
 }

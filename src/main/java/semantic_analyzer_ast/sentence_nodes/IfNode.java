@@ -1,5 +1,8 @@
 package semantic_analyzer_ast.sentence_nodes;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
+import ceivm.TagProvider;
 import exceptions.SemanticException;
 import semantic_analyzer_ast.expression_nodes.ExpressionNode;
 import semantic_analyzer_ast.visitors.VisitorEndsInReturn;
@@ -12,6 +15,29 @@ public class IfNode extends SentenceNode {
 
     public IfNode(String line, int row, int column) {
         super(line, row, column);
+    }
+
+    @Override
+    public void generateCode() {
+        IInstructionWriter writer = InstructionWriter.getInstance();
+
+        condition.generateCode();
+        String exitTag = TagProvider.getIfExitTag();
+        if (elseNode != null) {
+            String elseTag = TagProvider.getElseTag();
+            writer.write("bf", elseTag);
+            body.generateCode();
+            writer.write("jump", exitTag);
+            writer.addTag(elseTag);
+
+            elseNode.setExitTag(exitTag);
+            elseNode.generateCode();
+        } else {
+            writer.write("bf", exitTag);
+            body.generateCode();
+        }
+        writer.addTag(exitTag);
+
     }
 
     public ExpressionNode getCondition() {
@@ -53,7 +79,6 @@ public class IfNode extends SentenceNode {
         if (elseNode != null) {
             elseNode.validate();
         }
-
     }
 
     public boolean endsInReturn() {

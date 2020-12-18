@@ -10,6 +10,11 @@ public class EmptySentenceNode extends SentenceNode {
     }
 
     @Override
+    public void generateCode() {
+
+    }
+
+    @Override
     public void acceptVisitor(VisitorSentence v) {
         v.visit(this);
     }

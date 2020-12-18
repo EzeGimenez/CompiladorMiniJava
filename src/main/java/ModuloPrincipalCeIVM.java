@@ -1,3 +1,5 @@
+import ceivm.CeIASMBuilder;
+import ceivm.CeIASMBuilderImpl;
 import exceptions.CompilerException;
 import exceptions.SemanticException;
 import lexical_analyzer.FileHandler;
@@ -10,14 +12,15 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ModuloPrincipalSemantic implements ModuloPrincipal {
+public class ModuloPrincipalCeIVM implements ModuloPrincipal {
 
+    private final List<CompilerException> exceptions;
     private final UI userUI;
-    private final List<CompilerException> compilerExceptionList;
 
-    public ModuloPrincipalSemantic(String fileName) {
+    public ModuloPrincipalCeIVM(String fileName, String fileNameOutput) {
         userUI = new UIConsole();
-        compilerExceptionList = new ArrayList<>();
+        exceptions = new ArrayList<>();
+
         try {
             FileHandler fileHandler = new FileHandlerImpl(fileName);
             ISyntaxAnalyzer syntaxAnalyzer = new SyntaxAnalyzer(fileHandler);
@@ -26,20 +29,21 @@ public class ModuloPrincipalSemantic implements ModuloPrincipal {
             if (!hasLexicalOrSyntaxErrors) {
                 boolean hasSemanticErrors = consolidate();
                 if (!hasSemanticErrors) {
+                    generateCode(fileNameOutput);
                     System.out.println("[SinErrores]");
                 }
             }
 
             fileHandler.invalidate();
             SymbolTable.invalidate();
+
         } catch (FileNotFoundException e) {
-            reportFileNotFound(fileName);
+            userUI.displayError("Archivo no encontrado");
         }
     }
 
-    @Override
     public List<CompilerException> getCompilerExceptionList() {
-        return compilerExceptionList;
+        return exceptions;
     }
 
     private boolean analyze(ISyntaxAnalyzer syntaxAnalyzer) {
@@ -53,16 +57,16 @@ public class ModuloPrincipalSemantic implements ModuloPrincipal {
             } catch (CompilerException e) {
                 hasExceptions = true;
                 userUI.displayCompilerError(e);
-                compilerExceptionList.add(e);
+                exceptions.add(e);
             }
         }
         return hasExceptions;
     }
 
     private boolean consolidate() {
-        boolean hasExceptions = false, halt = false;
-        SymbolTable.getInstance().declarationCheck();
+        boolean halt = false;
         boolean declarationCheckSuccess = SymbolTable.getInstance().declarationCheck();
+        boolean hasExceptions = false;
         if (declarationCheckSuccess) {
             SymbolTable.getInstance().sentencesCheck();
         }
@@ -73,15 +77,15 @@ public class ModuloPrincipalSemantic implements ModuloPrincipal {
             } catch (SemanticException e) {
                 hasExceptions = true;
                 userUI.displayCompilerError(e);
-                compilerExceptionList.add(e);
+                exceptions.add(e);
             }
         }
-
         return hasExceptions;
     }
 
-    private void reportFileNotFound(String fileName) {
-        userUI.displayError("File Not Found: " + fileName);
+    private void generateCode(String fileNameOutput) {
+        //TODO file path must be user's input
+        CeIASMBuilder ceIASMBuilder = new CeIASMBuilderImpl(fileNameOutput);
+        ceIASMBuilder.start();
     }
 }
-

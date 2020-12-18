@@ -1,5 +1,7 @@
 package semantic_analyzer_ast.expression_nodes;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer.IAccessMode;
 import semantic_analyzer.IType;
@@ -43,5 +45,14 @@ public class AccessThisNode extends AccessNode {
     private boolean isStaticMethod() {
         IAccessMode accessMode = SymbolTable.getInstance().getCurrMethod().getAccessMode();
         return accessMode == null || accessMode.getName().equals("static");
+    }
+
+    @Override
+    public void generateCode() {
+        IInstructionWriter writer = InstructionWriter.getInstance();
+        writer.write("load", 3);
+        if (getChainedNode() != null) {
+            getChainedNode().generateCode();
+        }
     }
 }

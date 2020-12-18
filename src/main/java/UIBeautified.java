@@ -17,11 +17,11 @@ public class UIBeautified implements UI {
         int i = 0;
         for (CompilerException e : exceptions) {
             if (e.getRow() > 0 && e.getRow() <= fileAsStringList.size()) {
-                fileAsStringList.add(e.getRow() + i++, ANSI_RED + getColumnError(e) + ANSI_RESET);
-                //fileAsStringList.add(e.getRow() + i++, getColumnError(e));
+                //fileAsStringList.add(e.getRow() + i++, ANSI_RED + getColumnError(e) + ANSI_RESET);
+                fileAsStringList.add(e.getRow() + i++, getColumnError(e));
             } else {
-                fileAsStringList.add(ANSI_RED + "Error: " + e.getMessage() + ANSI_RESET);
-                //fileAsStringList.add("Error: " + e.getMessage());
+                //fileAsStringList.add(ANSI_RED + "Error: " + e.getMessage() + ANSI_RESET);
+                fileAsStringList.add("Error: " + e.getMessage());
             }
         }
 

@@ -1,5 +1,7 @@
 package semantic_analyzer;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer_ast.sentence_nodes.SentenceNode;
 import semantic_analyzer_ast.visitors.VisitorEndsInReturn;
@@ -73,6 +75,8 @@ public class Method extends IMethod {
                 row,
                 column
         );
+        out.setTag(getTag());
+        out.setOffset(getOffset());
         out.setAbstractSyntaxTree(getAbstractSyntaxTree());
         for (IParameter p : parameterList) {
             out.addParameter(p.cloneForOverWrite(line, row, column));
@@ -109,11 +113,41 @@ public class Method extends IMethod {
                     currSentence = null;
                 }
             }
+
             if (!visitorEndsInReturn.endsInReturn()) {
                 throw new SemanticException(this, "falta una sentencia de retorno");
             }
-
-
         }
     }
+
+    public void generateCode() {
+        IInstructionWriter writer = InstructionWriter.getInstance();
+        writer.write("loadfp");
+        writer.write("loadsp");
+        writer.write("storefp");
+
+        getAbstractSyntaxTree().generateCode();
+
+        addReturnInstruction();
+    }
+
+    private void addReturnInstruction() {
+        VisitorEndsInReturn visitorEndsInReturn = new VisitorEndsInReturn();
+        Iterator<SentenceNode> sentenceNodeIterator = getAbstractSyntaxTree().getSentences().iterator();
+
+        SentenceNode currSentence;
+        while (sentenceNodeIterator.hasNext()) {
+            currSentence = sentenceNodeIterator.next();
+            currSentence.acceptVisitor(visitorEndsInReturn);
+        }
+        IInstructionWriter writer = InstructionWriter.getInstance();
+        if (!visitorEndsInReturn.endsInReturn()) {
+            writer.write("storefp");
+
+            writer.write("ret", parameterList.size() + 1);
+        } else {
+            writer.write("nop");
+        }
+    }
+
 }

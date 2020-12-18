@@ -1,5 +1,7 @@
 package semantic_analyzer_ast.expression_nodes;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer.*;
 import semantic_analyzer_ast.sentence_nodes.DeclarationNode;
@@ -9,6 +11,9 @@ import semantic_analyzer_ast.visitors.VisitorExpression;
 import java.util.List;
 
 public class AccessVariableNode extends AccessNode {
+    private boolean isLeftSide = false, isLocalVariable;
+    private int offset = -99;
+
     public AccessVariableNode(String line, int row, int column) {
         super(line, row, column);
     }
@@ -25,14 +30,19 @@ public class AccessVariableNode extends AccessNode {
     public IType getCurrentType() throws SemanticException {
         IParameter parameter = getParameter();
         if (parameter != null) {
+            offset = parameter.getOffset();
+            isLocalVariable = true;
             return parameter.getType();
         }
         DeclarationNode declarationNode = getLocalDeclaration();
         if (declarationNode != null) {
+            isLocalVariable = true;
             return declarationNode.getType();
         }
         IVariable variable = getAttribute();
         if (variable != null) {
+            offset = variable.getOffset();
+            isLocalVariable = false;
             return variable.getType();
         }
         throw new SemanticException(this, "variable no definida o inaccesible");
@@ -59,15 +69,25 @@ public class AccessVariableNode extends AccessNode {
     }
 
     private DeclarationNode getLocalDeclaration() {
-        List<DeclarationNode> declarationNodeList = SymbolTable.getInstance().getCurrMethod().getAbstractSyntaxTree().getCurrentDeclarations();
         VisitorDeclarationFinder visitorDeclarationFinder = new VisitorDeclarationFinder(getToken().getLexeme());
+
+        List<DeclarationNode> declarationNodeList = SymbolTable
+                .getInstance()
+                .getCurrMethod()
+                .getAbstractSyntaxTree()
+                .getCurrentDeclarations();
+
+        int i = 0;
         for (DeclarationNode node : declarationNodeList) {
             node.acceptVisitor(visitorDeclarationFinder);
+            if (visitorDeclarationFinder.getDeclarationNodeFound() != null) {
+                offset = -i;
+                break;
+            }
+            i++;
         }
-        if (visitorDeclarationFinder.getDeclarationNodeFound() != null) {
-            return visitorDeclarationFinder.getDeclarationNodeFound();
-        }
-        return null;
+
+        return visitorDeclarationFinder.getDeclarationNodeFound();
     }
 
     @Override
@@ -84,11 +104,14 @@ public class AccessVariableNode extends AccessNode {
         IParameter parameter = getParameter();
         if (parameter != null) {
             validateChainedNode();
+            offset = parameter.getOffset();
+            isLocalVariable = true;
             return;
         }
         DeclarationNode declarationNode = getLocalDeclaration();
         if (declarationNode != null) {
             validateChainedNode();
+            isLocalVariable = true;
             return;
         }
         IVariable variable = getAttribute();
@@ -98,6 +121,8 @@ public class AccessVariableNode extends AccessNode {
             }
             attributeCheck(variable);
             validateChainedNode();
+            offset = variable.getOffset();
+            isLocalVariable = false;
             return;
         }
         throw new SemanticException(this, "variable no definida o inaccesible");
@@ -116,4 +141,33 @@ public class AccessVariableNode extends AccessNode {
         IAccessMode accessMode = SymbolTable.getInstance().getCurrMethod().getAccessMode();
         return accessMode != null && accessMode.getName().equals("static");
     }
+
+    public void setIsLeftSide() {
+        isLeftSide = true;
+    }
+
+    @Override
+    public void generateCode() {
+        IInstructionWriter writer = InstructionWriter.getInstance();
+        if (!isLocalVariable) {
+            writer.write("load", 3, "cargamos el this");
+            if (!isLeftSide || getChainedNode() != null) {
+                writer.write("loadref", offset);
+            } else {
+                writer.write("swap");
+                writer.write("storeref", offset);
+            }
+        } else {
+            if (!isLeftSide || getChainedNode() != null) {
+                writer.write("load", offset);
+            } else {
+                writer.write("store", offset);
+            }
+        }
+
+        if (getChainedNode() != null) {
+            getChainedNode().generateCode();
+        }
+    }
+
 }

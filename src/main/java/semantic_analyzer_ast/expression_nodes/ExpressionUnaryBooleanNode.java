@@ -1,5 +1,6 @@
 package semantic_analyzer_ast.expression_nodes;
 
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer.IType;
 import semantic_analyzer.TypeBoolean;
@@ -8,6 +9,7 @@ public class ExpressionUnaryBooleanNode extends ExpressionUnaryNode {
     public ExpressionUnaryBooleanNode(String line, int row, int column) {
         super(line, row, column);
     }
+
 
     @Override
     public IType getType() throws SemanticException {
@@ -23,4 +25,11 @@ public class ExpressionUnaryBooleanNode extends ExpressionUnaryNode {
         }
     }
 
+    @Override
+    public void generateCode() {
+        getOperandNode().generateCode();
+        if (getToken().getLexeme().equals("-")) {
+            InstructionWriter.getInstance().write("not");
+        }
+    }
 }

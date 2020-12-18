@@ -1,5 +1,6 @@
 package semantic_analyzer_ast.expression_nodes;
 
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer.IType;
 import semantic_analyzer.TypeChar;
@@ -9,6 +10,7 @@ public class TypeCharNode extends TypeNode {
     public TypeCharNode(String line, int row, int column) {
         super(line, row, column);
     }
+
 
     @Override
     public IType getType() {
@@ -24,4 +26,11 @@ public class TypeCharNode extends TypeNode {
     public void acceptVisitor(VisitorExpression visitorExpression) {
         visitorExpression.visit(this);
     }
+
+    @Override
+    public void generateCode() {
+        int charAsInt = getToken().getLexeme().charAt(0);
+        InstructionWriter.getInstance().write("push", charAsInt);
+    }
+
 }

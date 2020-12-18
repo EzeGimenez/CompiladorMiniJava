@@ -1,10 +1,34 @@
 package semantic_analyzer_ast.expression_nodes;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 
 public class ExpressionBinaryBetweenIntegers extends ExpressionBinaryBooleanNode {
     public ExpressionBinaryBetweenIntegers(String line, int row, int column) {
         super(line, row, column);
+    }
+
+    @Override
+    public void generateCode() {
+        getLeftSide().generateCode();
+        getRightSide().generateCode();
+        IInstructionWriter writer = InstructionWriter.getInstance();
+
+        switch (getToken().getLexeme()) {
+            case "<":
+                writer.write("lt");
+                break;
+            case ">":
+                writer.write("gt");
+                break;
+            case "<=":
+                writer.write("le");
+                break;
+            case ">=":
+                writer.write("ge");
+                break;
+        }
     }
 
     @Override

@@ -43,4 +43,6 @@ public interface ISymbolTable {
     void validate() throws SemanticException;
 
     void setCurrAST(CodeBlockNode codeBlockNode);
+
+    void generateVTs();
 }

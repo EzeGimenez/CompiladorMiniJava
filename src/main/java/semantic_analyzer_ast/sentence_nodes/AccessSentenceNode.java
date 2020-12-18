@@ -1,5 +1,7 @@
 package semantic_analyzer_ast.sentence_nodes;
 
+import ceivm.InstructionWriter;
+import ceivm.VisitorHasResult;
 import exceptions.SemanticException;
 import semantic_analyzer_ast.expression_nodes.ExpressionNode;
 import semantic_analyzer_ast.visitors.VisitorIsCons;
@@ -43,4 +45,17 @@ public class AccessSentenceNode extends SentenceNode {
             }
         }
     }
+
+    @Override
+    public void generateCode() {
+        expressionNode.generateCode();
+
+        VisitorHasResult visitorHasResult = new VisitorHasResult();
+        expressionNode.acceptVisitor(visitorHasResult);
+        boolean isResultIgnored = visitorHasResult.hasResult();
+        if (isResultIgnored) {
+            InstructionWriter.getInstance().write("pop", null, "el resultado anterior es ignorado");
+        }
+    }
+
 }

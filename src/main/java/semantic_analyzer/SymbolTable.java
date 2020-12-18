@@ -247,4 +247,12 @@ public class SymbolTable implements ISymbolTable {
             throw semanticException;
         }
     }
+
+    @Override
+    public void generateVTs() {
+        for (IClass c : classMap.values()) {
+            currClass = c;
+            c.generateVT();
+        }
+    }
 }

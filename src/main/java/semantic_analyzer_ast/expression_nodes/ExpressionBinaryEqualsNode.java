@@ -1,5 +1,7 @@
 package semantic_analyzer_ast.expression_nodes;
 
+import ceivm.IInstructionWriter;
+import ceivm.InstructionWriter;
 import exceptions.SemanticException;
 import semantic_analyzer.IType;
 import semantic_analyzer_ast.type_checker.TypeChecker;
@@ -9,6 +11,22 @@ public class ExpressionBinaryEqualsNode extends ExpressionBinaryBooleanNode {
 
     public ExpressionBinaryEqualsNode(String line, int row, int column) {
         super(line, row, column);
+    }
+
+    @Override
+    public void generateCode() {
+        getLeftSide().generateCode();
+        getRightSide().generateCode();
+        IInstructionWriter writer = InstructionWriter.getInstance();
+
+        switch (getToken().getLexeme()) {
+            case "==":
+                writer.write("eq");
+                break;
+            case "!=":
+                writer.write("ne");
+                break;
+        }
     }
 
     @Override

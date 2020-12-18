@@ -34,4 +34,6 @@ public abstract class Node {
     public int getColumn() {
         return column;
     }
+
+    public abstract void generateCode();
 }
